@@ -191,21 +191,21 @@ read_input_stream()
 }
 
 /* reads byte from the buffer */
-inline unsigned char  
+unsigned char
 read_byte()
 {
     return *in_buffer.read_pos;
 }
 
 /* returns pointer to the read position */
-inline unsigned char *
+unsigned char *
 read_pos()
 {
     return in_buffer.read_pos;
 }
 
 /* return the block end pointer */
-inline unsigned char *
+unsigned char *
 block_end_pos()
 {
     return in_buffer.block_end;
@@ -214,7 +214,7 @@ block_end_pos()
 /* advances the read pointer, if buffer has reached low water, get more from stream to buffer */
 /* returns false in case of end of stream */
 
-inline int 
+int
 get_next_byte()
 {
     if(in_buffer.read_pos >= in_buffer.low_pos) 
@@ -335,14 +335,14 @@ mark_block_end()
 }
 
 /* returns true if current byte is last in block */
-inline int
+int
 last_byte()
 {
     return in_buffer.block_end == in_buffer.read_pos;
 }
 
 /* returns true if end of stream has been reached */
-inline int
+static inline int
 end_of_stream()
 {
     if(in_buffer.stream_end != NULL && in_buffer.stream_end == in_buffer.read_pos) 
@@ -487,7 +487,7 @@ write_buffer(unsigned char *buf,off_t length)
 }
 
 /* put_byte, put one byte att current write position */
-inline void
+void
 put_byte(unsigned char byte)
 {
     *out_buffer.write_pos = byte;
@@ -495,7 +495,7 @@ put_byte(unsigned char byte)
 
 /* next_byte, advance the write pointer by one */
 /* if buffer full write it to disk */
-inline void
+void
 write_next_byte()
 {
     out_buffer.write_pos++;

@@ -682,7 +682,7 @@ close_commands(struct commands *commands)
 }
 
 /* reset the rpos counter for next block, in case block was shorter eg. delete count */
-inline void
+static inline void
 reset_rpos(struct command_list *c)
 {
     while(c != NULL)

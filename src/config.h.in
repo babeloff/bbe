@@ -1,0 +1,10 @@
+#cmakedefine HAVE_CONFIG_H
+#cmakedefine HAVE_FEATURES_H
+#cmakedefine HAVE_ERRNO_H
+#cmakedefine HAVE_ERROR_H
+#cmakedefine HAVE_SYS_TYPES_H
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_STRINGS_H
+#cmakedefine HAVE_GETOPT_H
+
+#cmakedefine HAVE_OFF_T 1

@@ -22,9 +22,9 @@
 
 /* $Id: bbe.h,v 1.28 2005/11/11 13:06:53 timo Exp $ */
 
-#ifdef HAVE_CONFIG_H
+//#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
+//#endif
 
 #ifdef HAVE_FEATURES_H
 #include <features.h>
@@ -44,12 +44,12 @@
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif 
+#endif
 
 #include <stdio.h>
 
 #ifndef HAVE_OFF_T
-#define long int off_t
+#define off_t long int
 #endif
 
 /* Types */
@@ -80,7 +80,7 @@
 /* Block definition */
 struct block {
     int type;
-    union 
+    union
     {
         off_t N;
         struct {
@@ -88,7 +88,7 @@ struct block {
             off_t length;
         } S;
     } start;
-    union 
+    union
     {
         off_t M;
         struct {
@@ -103,10 +103,10 @@ struct block {
 struct command_list {
     char letter;            // command letter (D,A,s,..)
     off_t offset;           // n for D,r,i and d commands
-    off_t count;              // count for d command
+    off_t count;            // count for d command
     unsigned char *s1;      // string for A,I,r,i,s,w and y commands
     off_t s1_len;
-    unsigned char *s2;      // replace for s and dest for y 
+    unsigned char *s2;      // replace for s and dest for y
     off_t s2_len;
     int rpos;               // replace position for s,r and y
     off_t fpos;             // found pos for s-command
@@ -148,11 +148,11 @@ struct output_buffer {
     unsigned char *low_pos;      // low water mark
     off_t block_offset;          // block offset (start = 0) number of bytes written at position write_pos
 };
-    
+
 
 
 /* function prototypes */
-extern void 
+extern void
 panic(char *msg,char *info,char *syserror);
 
 extern void *
@@ -167,10 +167,10 @@ set_input_file(char *file);
 extern void
 init_buffer();
 
-extern inline unsigned char  
+extern unsigned char
 read_byte();
 
-extern inline int 
+extern int
 get_next_byte();
 
 extern void
@@ -179,18 +179,18 @@ mark_block_end();
 extern int
 find_block();
 
-extern inline int
+extern int
 last_byte();
 
 extern void
 write_buffer(unsigned char *buf,off_t length);
 
-extern inline void
+extern void
 put_byte(unsigned char byte);
 
-extern inline void
+extern void
 write_next_byte();
- 
+
 extern void
 flush_buffer();
 
@@ -215,10 +215,10 @@ write_string(char *string);
 extern char *
 get_current_file(void);
 
-extern inline unsigned char *
+extern unsigned char *
 read_pos();
 
-extern inline unsigned char *
+extern unsigned char *
 block_end_pos();
 
 extern char *
