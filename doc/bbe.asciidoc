@@ -293,6 +293,8 @@ used as in _start_ and _stop_ of block definition.
 [#block-command-sect]
 === Block commands
 
+Lowercase characters indicate block commands.
+
 [cols="1,5a", grid="rows"]
 |===
 |I _string_
@@ -346,6 +348,8 @@ _f_ can have one of the sames codes as `F`-command.
 [#byte-command-sect]
 === Byte commands
 
+Lowercase characters indicate byte commands.
+
 Note:: The _n_ in byte commands is offset from the beginning of current block, first byte is number zero.
 
 [cols="1,5a", grid="rows"]
@@ -360,6 +364,7 @@ Currently, supported formats are:
 [horizontal]
 ASC:: Ascii
 BCD:: Binary Coded Decimal
+see <<#extract-numbers-ex>>
 
 |d _n_ _m_\|*
 |Delete _m_ bytes starting from the offset _n_. If * is defined instead of _m_, then
