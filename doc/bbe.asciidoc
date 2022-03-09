@@ -293,7 +293,7 @@ used as in _start_ and _stop_ of block definition.
 [#block-command-sect]
 === Block commands
 
-Lowercase characters indicate block commands.
+Uppercase characters indicate block commands.
 
 [cols="1,5a", grid="rows"]
 |===
@@ -364,11 +364,11 @@ Currently, supported formats are:
 [horizontal]
 ASC:: Ascii
 BCD:: Binary Coded Decimal
-see <<#extract-numbers-ex>>
+see <<#extract-numbers-ex>>, <<#print-bcd-as-ascii-ex>>
 
 |d _n_ _m_\|*
-|Delete _m_ bytes starting from the offset _n_. If * is defined instead of _m_, then
-all bytes of the block starting from _n_ are deleted.
+|Delete _m_ bytes starting from the offset _n_.
+If * is defined instead of _m_, then all bytes of the block starting from _n_ are deleted.
 
 |i _n_ _string_
 |Insert _string_ after byte number _n_.
@@ -402,8 +402,9 @@ _format_ can contain several codes, values are then separated by hyphen.
 |Replace bytes with _string_ starting at the byte number _n_ of the block.
 
 |s/_search_/_replace_/
-|All occurences of _search_ are replaced by _replace_. _replace_ can be empty.
-Separator `/` can be replaced by any character not present in _search_ or _replace_.
+|All occurrences of _search_ are replaced by _replace_.
+_replace_ can be empty.
+The separator `/` can be replaced by any character so long as it is not present in either _search_ or _replace_.
 
 |w `file`
 |Contents of blocks are written to file `file`.
@@ -471,7 +472,7 @@ the following  commands don't 'see' the removed byte.
 . Next block is searched, data between the blocks, if not suppressed with `-s`, is written to output stream.
 
 
-=== A Few More Examples
+== A Few More Examples
 
 .Edit a Phrase
 ====
@@ -599,6 +600,7 @@ Example output:
 ----
 ====
 
+[#print-bcd-as-ascii-ex]
 .Print Binary Coded Decimal as ASCII
 ====
 [source,script]
