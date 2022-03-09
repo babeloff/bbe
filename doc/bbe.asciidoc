@@ -1,0 +1,648 @@
+= bbe - binary block editor
+:author: Timo Savinen
+:email: <Timo Savinen>
+:revnumber: 0.2.3
+:revdate: 2022-03-07
+:revremark: 3.1 Update for {doctitle} in AsciiDoc
+:keywords: binary sed
+:toc:
+:toc-title: Table of Contents
+:sectnums:
+:sectanchors:
+:sectlinks:
+:sectids:
+:idprefix:
+:idseparator: -
+:imagesdir: images
+
+[license]
+== License
+
+This file documents version {revnumber} of `bbe`, the binary block editor.
+
+Copyright (C) 2005 Timo Savinen
+
+[preamble]
+----
+Permission is granted to make and distribute verbatim copies of
+this manual provided the copyright notice and this permission notice
+are preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the entire
+resulting derived work is distributed under the terms of a permission
+notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions.
+----
+
+[#preliminary-sect]
+== Preliminary information
+
+The `bbe` program is a sed-like editor for binary files. 
+`bbe` performs basic byte related transformations on blocks of input stream. 
+`bbe` is non-interactive command line tool and can be used as a part of a pipeline.
+`bbe` makes only one pass over input stream. 
+
+`bbe` contains regular expression features, like printing the filename, offset and block number.
+
+
+[#sample-sect]#Samples#
+[#invocation-sect]#Invoking bbe#
+[#overview-sect]#Overview#
+[#top-sec]#Top#
+[#sample-sect]
+== Samples using `bbe`
+
+A few examples of running `bbe`:
+
+[#extract-numbers-ex]
+.Extract Numbers
+====
+The task here is to extract BCD coded numbers from one file and
+write them, in ascii format, with newline, to another file.
+[source,bash, line-comment=\]
+----
+bbe -b "/\x80\x50\x0e/:12" \ <1>
+    -e "d 0 3"             \ <2>
+    -e "c BCD ASC"         \ <3>
+    -e "A \x0a"            \ <4>
+    -e "w /tmp/numbers"    \ <5>
+    -o /dev/null           \ <6>
+    /tmp/bdata             \ <7>
+----
+<1> A selected block, 12 bytes long blocks starting with a three BCD byte sequence of
+values `0x80`, `0x50` and `0x0e`.
+<2> The first three bytes (the block start sequence) are removed.
+<3> The remainder of the block is transformed from BCD to Ascii.
+<4> A newline character is appended at the end of the block.
+<5> All transformed blocks are written to `/tmp/numbers`.
+<6> Output is discarded.
+<7> Input is from the `/tmp/bdata` file.
+====
+
+[#insert-newline-ex]
+.Insert New Line
+====
+[source,script]
+----
+bbe -b ":525" -e "i 524 \x0a" -o /tmp/data_with_nl /tmp/data
+----
+A newline is added after every 525'th byte of the file `/tmp/data`.
+Data with newlines is written to `/tmp/data_with_nl`.
+====
+
+[#remove-newline-ex]
+.Remove New Line
+====
+[source,script]
+----
+bbe -b ":526" -e "d 525 1" -o /tmp/data /tmp/data_with_nl
+----
+Every 526'th byte (newline in <<#insert-newline-ex>> example) is removed from the file `/tmp/data_with_nl`.
+Data without newlines is written to `/tmp/data`.
+====
+
+.Mimic `dos2unix`
+====
+[source,script]
+----
+bbe -e "s/\x0d\x0a/\x0a/"
+----
+Same effect as has command `dos2unix`.
+Though, it will try to read the entire input into one block.
+====
+
+[#sample-sect]#Samples#
+[#overview-sect]#Overview#
+[#top-sec]#Top#
+[#running-sect]
+== How to run `bbe`
+
+`bbe` accepts several commands to operate on blocks.
+Commands are executed in the same order as they appear in command line or in a script file.
+Order is significant, because the changes made to a byte in a block are visible to subsequent commands.
+
+[#invocation-sect]
+=== Program invocation
+
+The format for running the `bbe` program is:
+
+[source,script]
+----
+bbe _option_ ...
+----
+
+`bbe` supports the following _option_:
+[cols="2,4", grid="rows"]
+|===
+|-b _BLOCK_
+
+--block=_BLOCK
+|Block definition.
+
+|-e _COMMAND_
+
+--expression=_COMMAND_
+|Add command(s) to the commands to be executed. Commands must be separated by semicolon.
+
+|-f _script-file_
+
+--file=_script-file_
+|Add commands from _script-file_ to the commands to be executed.
+
+|-o _file_
+
+--output=_file_
+|Write output to _file_ instead of standard output.
+
+|-s
+
+--suppress
+|Suppress printing of normal output, print only block contents.
+
+|-?
+
+--help
+|Print an informative help message describing the options and then exit successfully.
+
+
+|-V
+
+--version
+|Print the version number of `bbe` and then exit successfully.
+|===
+
+All remaining options are names of input files, if no input files are specified or `-` is given, then the standard input is read.
+
+[#block-sect]
+== Block definition
+
+`bbe` divides the input stream into blocks defined by the `-b` option.
+If a `block` is not defined, the whole input stream is considered as one block.
+Commands have effect only inside a block, the remainder of the input stream remains untouched. 
+Currently `bbe` supports only one block definition per invocation. 
+If input stream consists of different blocks, several `bbe` 's can be chained in a pipeline.
+
+A block can be defined several ways:
+[cols="1,5", grid="rows"]
+|===
+|_N_:_M_
+|Block starts at offset _N_ of input stream (first byte is 0).
+Block is _M_ bytes long.
+This definition allows only one block to be defined.
+
+|:_M_
+|The whole input stream is divided to _M_-size blocks.
+
+|/_start_/:/_stop_/
+|Blocks start with sequence _start_ and end with sequence _stop_.
+Both _start_ and _stop_ are included into a blocks.
+
+|/_start_/:
+|Blocks start with sequence _start_ and ends at next occurrence of _start_.
+Only the first _start_ is included into a block.
+
+|:/_stop_/
+|Blocks start at the beginning of input stream or after the end of previous block.
+Block ends at first occurrence of _stop_.
+Only the last _stop_ is included into a block.
+
+|/_start_/:_M_
+|Blocks start with sequence _start_ and end after _M_ bytes.
+The _M_ bytes begins with the first byte of _start_.
+|===
+
+It is possible to use c-style byte values in _N_, _M_, _start_ and _stop_.
+Values in _start_ and _stop_ must be escaped with `\`, `\` itself may be escaped as `\\`.
+
+Byte values can be expressed in decimal, octal or hexadecimal e.g. in _start_ and _stop_:
+
+[cols="1,2", grid="rows"]
+|===
+|\123, \32 or \0
+|Decimal values
+
+|\012, \08 or \0278
+|Octal values
+
+|\x0a, \x67 or \xff
+|Hexadecimal values
+|===
+
+Also single character escape codes `\y` may be used.
+Decimal values of `\y`'s:
+[cols="1,5", grid="rows"]
+|===
+|\a
+|7
+
+|\b
+|8
+
+|\t
+|9
+
+|\n
+|10
+
+|\v
+|11
+
+|\f
+|12
+
+|\r
+|13
+
+|\;
+|59
+
+*Semicolon must be escaped*, because it is a command delimiter.
+|===
+
+
+Values of _N_ and _M_ can be given in decimal, octal and hexadecimal:
+
+[cols="1,2", grid="rows"]
+|===
+|\123, \32 or \112232
+|Decimal values
+
+|\0128, \08123 or \0
+|Octal values
+
+|\x456a, \x167 or \xffde
+|Hexadecimal values
+|===
+
+[#command-sect]
+== `bbe` commands
+
+Commands in `bbe` can be divided in two groups: 
+block related commands, and
+byte related commands. 
+Block related commands operate at block level e.g. remove a block.
+Byte related commands always operate inside a block.
+They have no effect beyond the block boundaries.
+
+Same escape codes for byte values in _string_s can be
+used as in _start_ and _stop_ of block definition.
+
+[#block-command-sect]
+=== Block commands
+
+[cols="1,5a", grid="rows"]
+|===
+|I _string_
+|Write the _string_ to output stream before the block.
+
+|D [_N_]
+|Delete the _N_'th block. 
+If _N_ is not defined all blocks are deleted from output stream.
+
+Note:: First block is number one.
+
+|A _string_
+|Write the _string_ to output stream after the block.
+
+|J _N_
+|Commands appearing after this command have no effect until _N_ blocks are found.
+Means "Jump first _N_ blocks".
+
+Note:: Commands that are defined before this command have effect on every block.
+
+|L _N_
+|Commands appearing after this command have no effect after _N_ blocks are found.
+Means "Leave blocks after _N_'th block".
+
+Note:: Commands that are defined before this command have effect on every block.
+
+|N
+|Before block contents the file name where the current block starts is printed with colon.
+
+|F _f_
+|Before block contents the current stream offset and
+colon is printed in format specified by _f_.
+Stream offset starts at zero. _f_ can have one of following values:
+[horizontal]
+H:: Hexadecimal
+D:: Decimal
+O:: Octal
+
+|B _f_
+|Before block contents the current block number and colon is printed in format specified by _f_.
+Block numbering starts at one.
+_f_ can have one of the sames codes as `F`-command.
+
+|> `file`
+|Before printing a block, the contents of file `file` is printed.
+
+|< `file`
+|After printing a block, the contents of file `file` is printed.
+|===
+
+[#byte-command-sect]
+=== Byte commands
+
+Note:: The _n_ in byte commands is offset from the beginning of current block, first byte is number zero.
+
+[cols="1,5a", grid="rows"]
+|===
+|c _from_ _to_
+|Converts bytes from _from_ to _to_.
+
+Note:: Bytes, that cannot be converted are passed through as they are. e.g. in ASC -> BCD conversion, ASCII characters not
+in range `'0'` -- `'9'` are not converted.
+Currently, supported formats are:
+
+[horizontal]
+ASC:: Ascii
+BCD:: Binary Coded Decimal
+
+|d _n_ _m_\|*
+|Delete _m_ bytes starting from the offset _n_. If * is defined instead of _m_, then
+all bytes of the block starting from _n_ are deleted.
+
+|i _n_ _string_
+|Insert _string_ after byte number _n_.
+
+|j _n_
+|Commands appearing after `j`-command have no effect concerning bytes 0-_n_ of the block.
+
+|l _n_
+|Commands appearing after `l`-command have no effect concerning bytes starting from the byte number _n_ of the block.
+
+|u _n_ _c_
+|All bytes from start of the block to offset _n_ are replaced by _c_.
+
+|f _n_ _c_
+|All bytes starting from offset _n_ to the end of the block are replaced by _c_.
+
+|p _format_
+|Contents of block is printed in formats specified by _format_.
+_format_ can contain following format codes:
+
+[horizontal]
+H:: Hexadecimal.
+D:: Decimal.
+O:: Octal.
+A:: Ascii, non-printable characters are printed as space.
+B:: Binary.
+
+_format_ can contain several codes, values are then separated by hyphen.
+
+|r _n_ _string_
+|Replace bytes with _string_ starting at the byte number _n_ of the block.
+
+|s/_search_/_replace_/
+|All occurences of _search_ are replaced by _replace_. _replace_ can be empty.
+Separator `/` can be replaced by any character not present in _search_ or _replace_.
+
+|w `file`
+|Contents of blocks are written to file `file`.
+
+Note:: Data inserted by commands `A`, `I`, `>` and `<` are written to file `file` and
+`j` and `l` commands have no effect on `w`-commands.
+Zero size files are not preserved.
+Filename can contain format string `%B` or `%nB`, these format strings are
+replaced by current block number (starting from one), causing every block to have its own file.
+In `%nB`, the `n` is field width in range 0-99.
+If `n` has a leading zero, then the block numbers will be left padded with zeroes.
+
+|y/_source_/_dest_/
+|Translate bytes in _source_ to the corresponding bytes in _dest_. _source_ and _dest_ must have equal length.
+Separator `/` can be replaced by any character not present in _source_ or _dest_.
+
+|& _c_
+|Performs binary and with _c_ on block contents.
+
+|\| _c_
+|Performs binary or with _c_ on block contents.
+
+|^ _c_
+|Performs exclusive or with _c_ on block contents.
+
+|~
+|Performs binary negation on block contents.
+
+|x
+|Exchange the contents of nibbles (half an octet) of bytes.
+|===
+
+
+== Limitations
+
+At least in GNU/Linux `bbe` should be able to handle big files (> 4 GB), other systems are not tested.
+
+There are however, some limitations in block and command definitions:
+
+[cols="2,4", grid="rows"]
+|===
+|block definition
+|Search string in `s` command are limited to *16384* bytes.
+|===
+
+
+== How `bbe` works
+
+`bbe` scans the input stream just once,
+so the last block may differ from the block definition,
+because `bbe` doesn't 'peek' the end of the input stream.
+Last block may be shorter than defined, e.g. if block is defined as `/_string_/:128`
+and if the end of input stream is found before 128'th byte of the last block is reached, the last block remains shorter.
+
+=== Basic execution cycle:
+
+. Start of the block is searched.
+If found, data before block is written to output stream (unless `-s` is defined) and step 2 is executed.
+. Block commands affecting the start of the block (`I`, `D`, `J`, `N`, `F`, `>` and `B`) are executed.
+. The block is scanned byte by byte and all byte commands (lower case letters) are executed.
+
+Note:: Commands are executed on results of previous commands, if e.g. the first byte of the block is deleted,
+the following  commands don't 'see' the removed byte.
+. When end of the block is reached the end of the block commands (`A` and `<`) are executed.
+. Next block is searched, data between the blocks, if not suppressed with `-s`, is written to output stream.
+
+
+=== A Few More Examples
+
+.Edit a Phrase
+====
+[source,script]
+----
+echo "The quick brown fox jumps over a lazy dog" | bbe -b "/The/:21" -e "j 4" -e "s/ /X/"
+----
+Output is
+[source,script]
+----
+The quickXbrownXfoxXjumps over a lazy dog
+----
+
+The only block in this is
+[source,script]
+----
+The quick brown fox j
+----
+All spaces in the block are converted to X's, before conversion first 4 bytes are skipped.
+====
+
+.Add New Lines to Phrase
+====
+[source,script]
+----
+echo "The quick brown fox jumps over a lazy dog" | bbe -b ":/ /" -e "J 1" -e "A \x0a"
+----
+Output is:
+[source,script]
+----
+The quick
+brown
+fox
+jumps
+over
+a
+lazy
+dog
+----
+All blocks end at space, a newline character is inserted after every block except the first block.
+====
+
+.Edit a Phrase
+====
+[source,script]
+----
+echo "The quick brown fox jumps over a lazy dog" | bbe  -e "r 4 fast\x20" -e "s/f/c/"
+----
+Output is:
+
+[source,script]
+----
+The cast  brown cox jumps over a lazy dog
+----
+Also the `f` in `fast` is converted to `c`.
+====
+
+.Insert Hyphens
+====
+[source,script]
+----
+echo "1234567890" | bbe -b ":1"  -e "L 9" -e "A -"
+----
+Output is
+
+[source,script]
+----
+1-2-3-4-5-6-7-8-9-0
+----
+Hyphen is inserted after every 1 byte long block,but not after 9'th block.@*
+====
+
+.Extract Bounded Bytes
+====
+[source,script]
+----
+bbe -s -b "/First line/:/Last line/" /tmp/text
+----
+Print lines between sentences `First line` and `Last line`.
+====
+
+.Extract Links from HTML
+====
+[source,script]
+----
+bbe -s -b "%<a %:%</a>%" -e "s/\x0a/ /" -e "A \n" ./index.html
+----
+Extract all links from `./index.html`.
+To get one link per line, all newlines are converted to spaces and newline is added after every link.
+====
+
+.Mimic Hex Dump
+====
+[source,script]
+----
+|bbe -b "/\x5f\x28\x02/:10" -s  -e "F d"  -e "p h" -e "A \n" ./bindata
+----
+10 bytes long sequences starting with values `x5f` `x28` and `x02` are printed as hex values. 
+Also the file offset is printed before each sequence and new line is added after every sequence.
+Example output:
+
+[source,script]
+----
+52688:x5f x28 x02 x32 x36 x5f x81 x64 x01 x93
+68898:x5f x28 x02 x39 x46 x5f x81 x64 x41 x05
+69194:x5f x28 x02 x42 x36 x5f x81 x64 x41 x05
+----
+====
+
+.Print Files in Directory
+====
+[source,script]
+----
+bbe -b "/Linux/:5" -s -e "N;D;A \x0a" /bin/* | uniq
+----
+Print the file names of those programs in /bin directory which contains word `Linux`.
+Example output:
+
+[source,script]
+----
+/bin/loadkeys:
+/bin/mkbimage:
+/bin/ps:
+/bin/uname:
+----
+====
+
+.Print Binary Coded Decimal as ASCII
+====
+[source,script]
+----
+bbe -b "/\x5f\x81\x18\x06/:10" -s -e "B d;d 0 4;c BCD ASC;A \n" ./bindata
+----
+Print BCD numbers and their block numbers in ascii format.
+Numbers start with sequence `x5f` `x81` `x18` `x06`.
+The start sequence is not printed.
+====
+
+.Clear Least Significant Nybble
+====
+[source,script]
+----
+bbe -b "/\x5f/:2" -e "j 1;& \xf0" -o newdata bindata
+----
+The least significant nybble of bytes after `x5f` is cleared.
+====
+
+.JPEG Extration
+====
+[source,script]
+----
+bbe -b "/\xff\xd8\xff/:/\xff\xd9/" -s -e "w pic%02B.jpg" -o /dev/null manual.pdf
+----
+Extract jpg-images from pdf-file to separate jpg-files
+(assuming that the jpg start/stop sequences does not appear in other context than jpg-images).
+Files will be named as `pic01.jpg`, `pic02.jpg`, `pic03.jpg`, ...
+====
+
+.Body Replacement
+====
+[source,script]
+----
+bbe -b "_<body>_:_</body>_" -s -o temp nicebody.html
+bbe -b "_<body>_:_</body>_" -e "D;< temp" -o tmpindex.html index.html
+mv tmpindex.html index.html
+----
+The body part of the html-document `index.html` is replaced by the body of the document `nicebody.html`.
+====
+
+== Reporting Bugs
+
+If you find a bug in `bbe`, please send electronic mail to <tjsa@@iki.fi>.
+Include the version number, which you can find by running `bbe --version`.
+Also include in your message the output that the program produced and the output you expected.
+
+If you have other questions, comments or suggestions about
+`bbe`, contact the author via electronic mail to <tjsa@@iki.fi>.
+The author will try to help you out, although he may not have time to fix your problems.
+

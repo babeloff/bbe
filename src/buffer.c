@@ -63,11 +63,12 @@ set_output_file(char *file)
 void
 write_output_stream(unsigned char *buffer, ssize_t length)
 {
-    if(write(out_stream.fd,buffer,length) == -1) panic("Error writing to",out_stream.file,strerror(errno));
+    if(write(out_stream.fd,buffer,length) == -1)
+      panic("Error writing to",out_stream.file,strerror(errno));
 }
 
 
-/* open a input file and put it in input file list */
+/* open an input file and put it in input file list */
 void
 set_input_file(char *file)
 {
@@ -157,11 +158,12 @@ read_input_stream()
         to_be_saved = 0;
         buffer_write_pos = in_buffer.buffer;
         in_buffer.stream_offset = (off_t) 0;
-    } else                                            //we have allready read something
+    } else                                            //we have already read something
     {
         to_be_read = in_buffer.read_pos - in_buffer.buffer;
         to_be_saved = (ssize_t) INPUT_BUFFER_SIZE - to_be_read;
-        if (to_be_saved > INPUT_BUFFER_SIZE / 2) panic("buffer error: reading to half full buffer",NULL,NULL);
+        if (to_be_saved > INPUT_BUFFER_SIZE / 2)
+          panic("buffer error: reading to half full buffer",NULL,NULL);
         memcpy(in_buffer.buffer,in_buffer.read_pos,to_be_saved);    // move "low water" part to beginning of buffer
         buffer_write_pos = in_buffer.buffer + to_be_saved;
         in_buffer.stream_offset += (off_t) to_be_read;
@@ -177,7 +179,8 @@ read_input_stream()
          if (last_read == -1) panic("Error reading file",in_stream->file,strerror(errno));
          if (last_read == 0) 
          { 
-             if (close(in_stream->fd) == -1) panic("Error in closing file",in_stream->file,strerror(errno));
+             if (close(in_stream->fd) == -1)
+               panic("Error in closing file",in_stream->file,strerror(errno));
              in_stream = in_stream->next;
              if (in_stream != NULL) 
                  in_stream->start_offset = in_buffer.stream_offset + (off_t) read_count + (off_t) to_be_saved;
@@ -341,17 +344,13 @@ last_byte()
     return in_buffer.block_end == in_buffer.read_pos;
 }
 
-/* returns true if end of stream has been reached */
+/* returns true (1) if end of stream has been reached */
 static inline int
 end_of_stream()
 {
-    if(in_buffer.stream_end != NULL && in_buffer.stream_end == in_buffer.read_pos) 
-    {
-        return 1;
-    } else
-    {
-        return 0;
-    }
+    if(in_buffer.stream_end == NULL) return 0;
+    if(in_buffer.stream_end > in_buffer.read_pos) return 0;
+    return 1;
 }
 
 /* read for stream to input buffer and advance the read_pos to the start of the buffer */
