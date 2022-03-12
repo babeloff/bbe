@@ -28,6 +28,10 @@
 #include <fcntl.h>
 #include <string.h>
 
+#ifdef WIN32
+#include <share.h>
+#endif
+
 /* output file */
 struct io_file out_stream;
 
@@ -53,8 +57,18 @@ set_output_file(char *file)
         out_stream.file = "(stdout)";
     } else
     {
-        out_stream.fd = open(file,O_WRONLY | O_CREAT | O_TRUNC,S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-        if(out_stream.fd == -1) panic("Cannot open for writing",file,strerror(errno));
+#ifdef WIN32
+      errno_t rc = _sopen_s(&out_stream.fd, file,
+                            _O_WRONLY  | _O_CREAT | _O_TRUNC| _O_BINARY,
+                            _SH_DENYNO, _S_IREAD | _S_IWRITE);
+      if (rc != 0) panic("Cannot open for writing",file,strerror(rc));
+#else
+      out_stream.fd = open(file,
+                           O_WRONLY | O_CREAT | O_TRUNC,
+                           S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+
+      if(out_stream.fd == -1) panic("Cannot open for writing",file,strerror(errno));
+#endif
         out_stream.file = xstrdup(file);
     }
 }
@@ -98,8 +112,15 @@ set_input_file(char *file)
         new->file = "(stdin)";
     } else
     {
+#ifdef WIN32
+      errno_t rc = _sopen_s(&new->fd, file,
+                            _O_RDONLY | _O_BINARY,
+                            _SH_DENYWR, _S_IREAD);
+      if (rc != 0) panic("Cannot open for reading",file,strerror(rc));
+#else
         new->fd = open(file,O_RDONLY);
         if(new->fd == -1) panic("Cannot open file for reading",file,strerror(errno));
+#endif
         new->file = xstrdup(file);
     }
 }

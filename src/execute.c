@@ -29,6 +29,10 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef WIN32
+#include <share.h>
+#endif
+
 /* tells if current byte should be deleted */
 static int delete_this_byte;
 
@@ -552,8 +556,14 @@ open_w_files(off_t block_number)
             }
 
             bn_printf(file,c->s1,block_number);
+
+#ifdef WIN32
+          errno_t rc = fopen_s(&c->fd, file,"wb");
+          if (rc != 0) panic("Cannot open file for writing",file,strerror(rc));
+#else
             c->fd = fopen(file,"w");
             if(c->fd == NULL) panic("Cannot open file for writing",file,strerror(errno));
+#endif
             c->count = 0;
             if(c->s2 != NULL) free(c->s2);
             c->s2 = xstrdup(file);
@@ -586,8 +596,13 @@ init_commands(struct commands *commands)
                     c->s2 = NULL;
                 } else
                 {
+#ifdef WIN32
+                  errno_t rc = fopen_s(&c->fd, c->s1,"wb");
+                  if (rc != 0) panic("Cannot open file for writing",c->s1,strerror(rc));
+#else
                     c->fd = fopen(c->s1,"w");
                     if(c->fd == NULL) panic("Cannot open file for writing",c->s1,strerror(errno));
+#endif
                     c->offset = 0;
                     c->s2 = xstrdup(c->s1);
                 }
@@ -603,10 +618,16 @@ init_commands(struct commands *commands)
     {
         switch(c->letter)
         {
-            case '>':
-                c->fd = fopen(c->s1,"r");
-                if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
-                break;
+            case '>': {
+#ifdef WIN32
+              errno_t rc = fopen_s(&c->fd, c->s1, "rb");
+              if (rc != 0) panic("Cannot open for reading", c->s1, strerror(rc));
+#else
+              c->fd = fopen(c->s1,"r");
+              if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
+#endif
+            }
+            break;
         }
         c = c->next;
     }
@@ -617,10 +638,16 @@ init_commands(struct commands *commands)
     {
         switch(c->letter)
         {
-            case '<':
-                c->fd = fopen(c->s1,"r");
-                if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
-                break;
+            case '<': {
+#ifdef WIN32
+              errno_t rc = fopen_s(&c->fd, c->s1, "rb");
+              if (rc != 0) panic("Cannot open for reading", c->s1, strerror(rc));
+#else
+              c->fd = fopen(c->s1,"r");
+              if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
+#endif
+            }
+            break;
         }
         c = c->next;
     }

@@ -30,6 +30,10 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#ifdef WIN32
+#include <share.h>
+#endif
+
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
@@ -705,8 +709,13 @@ parse_command_file(char *file)
   line = xmalloc(line_len);
   info = xmalloc(strlen(file) + 100);
 
+#ifdef WIN32
+  errno_t rc = fopen_s(&fp, file, "rb");
+  if (rc != 0) panic("Error opening command file", file, strerror(rc));
+#else
   fp = fopen(file,"r");
-  if (fp == NULL) panic("Error in opening file",file,strerror(errno));
+  if (fp == NULL) panic("Error opening command file",file,strerror(errno));
+#endif
 
 #ifdef HAVE_GETLINE
   while(getline(&line,&line_len,fp) != -1)
@@ -733,8 +742,14 @@ parse_command_file(char *file)
 void
 parse_block_file(char *file)
 {
+#ifdef WIN32
+  FILE * fp;
+  errno_t rc = fopen_s(&fp, file, "rb");
+  if (rc != 0) panic("Error opening block description file", file, strerror(rc));
+#else
   FILE * fp = fopen(file,"r");
-  if (fp == NULL) panic("Error in opening file",file,strerror(errno));
+  if (fp == NULL) panic("Error opening block description file",file,strerror(errno));
+#endif
 
   fseek (fp, 0, SEEK_END);
   long length = ftell (fp);
