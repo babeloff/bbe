@@ -212,6 +212,11 @@ Only the last _stop_ is included into a block.
 |/_start_/:_M_
 |Blocks start with sequence _start_ and end after _M_ bytes.
 The _M_ bytes begins with the first byte of _start_.
+
+|0:$
+|There are special _start_ and _stop_ indicators, '0' and '$', respectively. 0, which takes the band end after _M_ bytes.
+'0' indicates the beginning of the file and '$' the end.
+If no block is provided these are the default values.
 |===
 
 It is possible to use c-style byte values in _N_, _M_, _start_ and _stop_.

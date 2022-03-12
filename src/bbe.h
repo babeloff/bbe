@@ -153,7 +153,10 @@ struct output_buffer {
 
 /* function prototypes */
 extern void
-panic(char *msg,char *info,char *syserror);
+panic(char *msg,char *info1,char *syserror);
+
+extern void
+panic_c(char *msg,char action,char *info1,char *syserror);
 
 extern void *
 xmalloc (size_t size);

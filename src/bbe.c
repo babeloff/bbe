@@ -52,6 +52,8 @@ static char *email_address = PACKAGE_BUGREPORT;
 static char *email_address = "tjsa@iki.fi";
 #endif
 
+int const MAX_TOKEN = 10;
+
 
 /* global block */
 struct block block;
@@ -86,11 +88,12 @@ char *p_formats="DOHAB";
 /* formats for F and B commands */
 char *FB_formats="DOH";
 
-static char short_opts[] = "b:e:f:o:s?V";
+static char short_opts[] = "b:g:e:f:o:s?V";
 
 #ifdef HAVE_GETOPT_LONG
 static struct option long_opts[] = {
     {"block",1,NULL,'b'},
+    {"block-file",1,NULL,'g'},
     {"expression",1,NULL,'e'},
     {"file",1,NULL,'f'},
     {"output",1,NULL,'o'},
@@ -104,22 +107,51 @@ static struct option long_opts[] = {
 void
 panic(char *msg,char *info,char *syserror)
 {
-    if(panic_info != NULL) fprintf(stderr,"%s: %s",program,panic_info);
+  if(panic_info != NULL) fprintf(stderr,"%s: %s",program,panic_info);
 
-    if (info == NULL && syserror == NULL)
-    {
+  if (info == NULL)
+      if (syserror == NULL)
         fprintf(stderr,"%s: %s\n",program,msg);
-    } else if(info != NULL && syserror == NULL)
-    {
+      else
+        fprintf(stderr,"%s: %s: %s\n",program,msg,syserror);
+  else
+      if (syserror == NULL)
         fprintf(stderr,"%s: %s: %s\n",program,msg,info);
-    } else if(info != NULL && syserror != NULL)
-    {
-        fprintf(stderr,"%s: %s: %s; %s\n",program,msg,info,syserror);
-    } else if(info == NULL && syserror != NULL)
-    {
-        fprintf(stderr,"%s: %s; %s\n",program,msg,syserror);
-    }
-    exit(EXIT_FAILURE);
+      else
+        fprintf(stderr,"%s: %s: %s: %s\n",program,msg,info,syserror);
+
+  exit(EXIT_FAILURE);
+}
+
+void
+panic_c(char *msg,char action,char *info,char *syserror)
+{
+  if(panic_info != NULL) fprintf(stderr,"%s: %s",program,panic_info);
+
+  if (action == NULL)
+    if (info == NULL)
+      if (syserror == NULL)
+        fprintf(stderr,"%s: %s\n",program,msg);
+      else
+        fprintf(stderr,"%s: %s: %s\n",program,msg,syserror);
+    else
+      if (syserror == NULL)
+        fprintf(stderr,"%s: %s: %s\n",program,msg,info);
+      else
+        fprintf(stderr,"%s: %s: %s: %s\n",program,msg,info,syserror);
+  else
+    if (info == NULL)
+      if (syserror == NULL)
+        fprintf(stderr,"%s: %s: %c\n",program,msg,action);
+      else
+        fprintf(stderr,"%s: %s: %c: %s\n",program,msg,action,syserror);
+    else
+      if (syserror == NULL)
+        fprintf(stderr,"%s: %s: %c: %s\n",program,msg,action,info);
+      else
+        fprintf(stderr,"%s: %s: %c: %s: %s\n",program,msg,action,info,syserror);
+
+  exit(EXIT_FAILURE);
 }
 
 /* parse a long int, can start with n (dec), x (hex), 0 (oct) */
@@ -149,7 +181,7 @@ parse_long(char *long_int)
                 if(!isdigit(*scan)) panic("Error in number",long_int,NULL);
                 break;
             case 'o':
-                if(!isdigit(*scan) || *scan >= '8') panic("Error in number",long_int,NULL);
+                if(!isdigit(*scan) || *scan >= '8') panic("Error in number",long_int, NULL);
                 break;
             case 'x':
                 if(!isxdigit(*scan)) panic("Error in number",long_int,NULL);
@@ -270,19 +302,25 @@ parse_string(char *string,off_t *length)
 
 /* parse a block definition and save it to block */
 static void
-parse_block(char *bs)
+parse_block(char *bs, int length)
 {
     char slash_char;
     char *p = bs;
     int i = 0;
     char *buf;
+    char *after = bs + length;
 
-    if(strlen(bs) > (2*4*INPUT_BUFFER_LOW))
+    if(length > (2*4*INPUT_BUFFER_LOW))
     {
         panic("Block definition too long",NULL,NULL);
     }
 
     buf=xmalloc(2*4*INPUT_BUFFER_LOW);
+    block.type = 0;
+    block.start.N = -1;
+    block.start.S.length = 0;
+    block.stop.M = -1;
+    block.stop.S.length = 0;
 
     if (*p == ':')
     {
@@ -330,7 +368,7 @@ parse_block(char *bs)
 
     p++;
 
-    if (*p == 0)
+    if (p == after)
     {
         block.stop.S.length = 0;
         block.type |= BLOCK_STOP_S;
@@ -382,7 +420,7 @@ parse_block(char *bs)
             }
         }
     } 
-    if (*p != 0)
+    if (p != after)
     {
         panic("syntax error in block definition",bs,NULL);
     }
@@ -396,7 +434,7 @@ parse_command(char *command_string)
     struct command_list *curr,*new,**start;
     char *c,*p,*buf;
     char *f;
-    char *token[10];
+    char *token[MAX_TOKEN];
     char slash_char;
     int i,j;
 
@@ -411,7 +449,7 @@ parse_command(char *command_string)
     i = 0;
     token[i] = strtok(c," \t\n");
     i++;
-    while(token[i - 1] != NULL && i < 10) token[i++] = strtok(NULL," \t\n");
+    while(token[i - 1] != NULL && i < MAX_TOKEN) token[i++] = strtok(NULL," \t\n");
     i--;
 
     if(strchr(BLOCK_START_COMMANDS,token[0][0]) != NULL)
@@ -428,7 +466,7 @@ parse_command(char *command_string)
         start = &cmds.block_end;
     } else
     {
-        panic("Error in command",command_string,NULL);
+        panic_c("Error unknown command",token[0][0], command_string,NULL);
     }
 
     if (curr != NULL)
@@ -451,7 +489,8 @@ parse_command(char *command_string)
     {
         case 'D':
         case 'K':
-            if(i < 1 || i > 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i < 1 || i > 2 || strlen(token[0]) > 1)
+              panic_c("Error in command ",new->letter,command_string,NULL);
             if(i == 2) 
             {
                 new->offset = parse_long(token[1]);
@@ -463,33 +502,33 @@ parse_command(char *command_string)
             break;
         case 'A':
         case 'I':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command ",new->letter,command_string,NULL);
             new->s1 = parse_string(token[1],&new->s1_len);
             break;
         case 'w':
         case '<':
         case '>':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->s1 = xstrdup(token[1]);
             break;
         case 'j':
         case 'J':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->count = parse_long(token[1]);
             break;
         case 'l':
         case 'L':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->count = parse_long(token[1]);
             break;
         case 'r':
         case 'i':
-            if(i != 3 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->offset = parse_long(token[1]);
             new->s1 = parse_string(token[2],&new->s1_len);
             break;
         case 'd':
-            if(i < 2 || i > 3 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i < 2 || i > 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->offset = parse_long(token[1]);
 
             if(token[2][0] == '*' && !token[2][1])
@@ -498,11 +537,12 @@ parse_command(char *command_string)
             } else
             {
                 new->count = parse_long(token[2]);
-                if(new->count < 1) panic("Error in command",command_string,NULL);
+                if(new->count < 1) panic_c("Error in command",new->letter,command_string,NULL);
             }
             break;
         case 'c':
-            if(i != 3 || strlen(token[1]) != 3 || strlen(token[2]) != 3 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 3 || strlen(token[1]) != 3 || strlen(token[2]) != 3 || strlen(token[0]) > 1)
+              panic_c("Error in command",new->letter,command_string,NULL);
             new->s1 = xmalloc(strlen(token[1]) + strlen(token[2]) + 2);
             strcpy(new->s1,token[1]);
             strcat(new->s1,token[2]);
@@ -513,11 +553,11 @@ parse_command(char *command_string)
             }
             j = 0;
             while(*convert_strings[j] != 0 && strcmp(convert_strings[j],new->s1) != 0) j++;
-            if(*convert_strings[j] == 0) panic("Unknown conversion",command_string,NULL);
+            if(*convert_strings[j] == 0) panic_c("Unknown conversion",new->letter,command_string,NULL);
             break;
         case 's':
         case 'y':
-            if(strlen(command_string) < 4) panic("Error in command",command_string,NULL);
+            if(strlen(command_string) < 4) panic_c("Error in command",new->letter,command_string,NULL);
 
             buf=xmalloc((4*INPUT_BUFFER_LOW) + 1);
 
@@ -526,29 +566,29 @@ parse_command(char *command_string)
             p += 2;
             j = 0;
             while(*p != 0 && *p != slash_char && j < 4*INPUT_BUFFER_LOW) buf[j++] = *p++;
-            if(*p != slash_char) panic("Error in command",command_string,NULL);
+            if(*p != slash_char) panic_c("Error in command",new->letter,command_string,NULL);
             buf[j] = 0;
             new->s1 = parse_string(buf,&new->s1_len);
             if(new->s1_len > INPUT_BUFFER_LOW) panic("String in command too long",command_string,NULL);
-            if(new->s1_len == 0) panic("Error in command",command_string,NULL);
+            if(new->s1_len == 0) panic_c("Error in command",new->letter,command_string,NULL);
 
             p++;
 
             j = 0;
             while(*p != 0 && *p != slash_char && j < 4*INPUT_BUFFER_LOW) buf[j++] = *p++;
             buf[j] = 0;
-            if(*p != slash_char) panic("Error in command",command_string,NULL);
+            if(*p != slash_char) panic_c("Error in command",new->letter,command_string,NULL);
             new->s2 = parse_string(buf,&new->s2_len);
-            if(new->s2_len > INPUT_BUFFER_LOW) panic("String in command too long",command_string,NULL);
+            if(new->s2_len > INPUT_BUFFER_LOW) panic_c("String in command too long",new->letter,command_string,NULL);
 
             if(new->letter == 'y' && new->s1_len != new->s2_len) panic("Strings in y-command must have equal length",command_string,NULL);
             free(buf);
             break;
         case 'F':
         case 'B':
-            if(i > 1 && (strlen(token[1]) != 1)) panic("Error in command",command_string,NULL);
+            if(i > 1 && (strlen(token[1]) != 1)) panic_c("Error in command",new->letter,command_string,NULL);
         case 'p':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->s1 = parse_string(token[1],&new->s1_len);
             j = 0;
             while(new->s1[j] != 0) {
@@ -563,31 +603,31 @@ parse_command(char *command_string)
                 f = FB_formats;
             }
             while(*f != 0 && strchr(new->s1,*f) == NULL) f++;
-            if (*f == 0) panic("Error in command",command_string,NULL);
+            if (*f == 0) panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case 'N':
-            if(i != 1 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 1 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case '&':
         case '|':
         case '^':
-            if(i != 2 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->s1 = parse_string(token[1],&new->s1_len);
-            if(new->s1_len != 1)  panic("Error in command",command_string,NULL);
+            if(new->s1_len != 1)  panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case '~':
         case 'x':
-            if(i != 1 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 1 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case 'u':
         case 'f':
-            if(i != 3 || strlen(token[0]) > 1) panic("Error in command",command_string,NULL);
+            if(i != 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->offset = parse_long(token[1]);
             new->s1 = parse_string(token[2],&new->s1_len);
-            if(new->s1_len != 1)  panic("Error in command",command_string,NULL);
+            if(new->s1_len != 1)  panic_c("Error in command",new->letter,command_string,NULL);
             break;
         default:
-            panic("Unknown command",command_string,NULL);
+            panic_c("Unknown command",new->letter,command_string,NULL);
             break;
     }
     free(c);
@@ -648,7 +688,7 @@ parse_commands(char *command_string)
         c++;
     }
 }
-    
+
 
 
 /* parse one command, commands are in list 
@@ -656,34 +696,63 @@ parse_commands(char *command_string)
 void
 parse_command_file(char *file)
 {
-    FILE *fp;
-    char *line;
-    char *info;
-    size_t line_len = (8*1024);
-    int line_no = 0;
+  FILE *fp;
+  char *line;
+  char *info;
+  size_t line_len = (8*1024);
+  int line_no = 0;
 
-    line = xmalloc(line_len);
-    info = xmalloc(strlen(file) + 100);
+  line = xmalloc(line_len);
+  info = xmalloc(strlen(file) + 100);
 
-    fp = fopen(file,"r");
-    if (fp == NULL) panic("Error in opening file",file,strerror(errno));
+  fp = fopen(file,"r");
+  if (fp == NULL) panic("Error in opening file",file,strerror(errno));
 
 #ifdef HAVE_GETLINE
-    while(getline(&line,&line_len,fp) != -1) 
+  while(getline(&line,&line_len,fp) != -1)
 #else
-    while(fgets(line,line_len,fp) != NULL)
+  while(fgets(line,line_len,fp) != NULL)
 #endif
-    {
-        line_no++;
-        sprintf(info,"Error in file '%s' in line %d\n",file,line_no);
-        panic_info=info;
-        parse_commands(line);
-    }
+  {
+    line_no++;
+    sprintf(info,"Error in file '%s' in line %d\n",file,line_no);
+    panic_info=info;
+    parse_commands(line);
+  }
 
-    free(line);
-    free(info);
-    fclose(fp);
+  free(line);
+  free(info);
+  fclose(fp);
+  panic_info=NULL;
+}
+
+/**
+ * parse one block definition, only one block is in the file.
+ * The block definition is the entire file.
+ */
+void
+parse_block_file(char *file)
+{
+  FILE * fp = fopen(file,"r");
+  if (fp == NULL) panic("Error in opening file",file,strerror(errno));
+
+  fseek (fp, 0, SEEK_END);
+  long length = ftell (fp);
+  fseek (fp, 0, SEEK_SET);
+  char * buffer = xmalloc (length);
+  if (! buffer) {
+    fclose (fp);
+    char * info = xmalloc(strlen(file) + 100);
+    sprintf(info,"Error in file '%s'\n",file);
+    panic_info=info;
     panic_info=NULL;
+    return;
+  }
+  fread (buffer, 1, length, fp);
+  fclose (fp);
+  parse_block(buffer, length);
+  free(buffer);
+  panic_info=NULL;
 }
 
 void
@@ -693,6 +762,8 @@ help(FILE *stream)
 #ifdef HAVE_GETOPT_LONG
     fprintf(stream,"-b, --block=BLOCK\n");
     fprintf(stream,"\t\tBlock definition.\n");
+    fprintf(stream,"-g, --block-file=block-file\n");
+    fprintf(stream,"\t\tAdd block definition from block-file.\n");
     fprintf(stream,"-e, --expression=COMMAND\n");
     fprintf(stream,"\t\tAdd command to the commands to be executed.\n");
     fprintf(stream,"-f, --file=script-file\n");
@@ -707,6 +778,8 @@ help(FILE *stream)
 #else
     fprintf(stream,"-b BLOCK\n");
     fprintf(stream,"\t\tBlock definition.\n");
+    fprintf(stream,"-g block-file\n");
+    fprintf(stream,"\t\tAdd a block definition from block-file.\n");
     fprintf(stream,"-e COMMAND\n");
     fprintf(stream,"\t\tAdd command to the commands to be executed.\n");
     fprintf(stream,"-f script-file\n");
@@ -761,7 +834,10 @@ main (int argc, char **argv)
         {
             case 'b':
                 if(block.type) panic("Only one -b option allowed",NULL,NULL);
-                parse_block(optarg);
+                parse_block(optarg, strlen(optarg));
+                break;
+            case 'g':
+                parse_block_file(optarg);
                 break;
             case 'e':
                 parse_commands(optarg);
@@ -789,7 +865,7 @@ main (int argc, char **argv)
                 break;
         }
     }
-    if(!block.type) parse_block("0:$");
+    if(!block.type) parse_block("0:$", 3);
     if(out_stream.file == NULL) set_output_file(NULL);
 
     if(optind < argc)
