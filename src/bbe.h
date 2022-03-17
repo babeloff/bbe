@@ -27,37 +27,33 @@
 //#endif
 
 #ifdef HAVE_FEATURES_H
-#include <features.h>
+#  include <features.h>
 #endif
 
 #ifdef HAVE_ERRNO_H
-
-#include <errno.h>
-
+#  include <errno.h>
 #endif
 
 #ifdef HAVE_ERROR_H
-
-#include <error.h>
-
+#  include <error.h>
 #endif
 
 #ifdef HAVE_SYS_TYPES_H
-
-#include <sys/types.h>
-
+#  include <sys/types.h>
 #endif
 
 #ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
 
-#include <unistd.h>
-
+#ifdef HAVE_REGEX_H
+#  include <regex.h>
 #endif
 
 #include <stdio.h>
 
 #ifndef HAVE_OFF_T
-#define off_t long int
+#  define off_t long int
 #endif
 
 /**
@@ -99,6 +95,10 @@
 /**
  * structs
  */
+
+struct stringl {
+
+};
 
 struct pattern {
   unsigned char *string;

@@ -543,7 +543,6 @@ parse_command(char *command_string) {
       if (*convert_strings[j] == 0) panic_c("Unknown conversion", new->letter, command_string, NULL);
       break;
     case 's':
-    case 't':
     case 'y':
       if (strlen(command_string) < 4) panic_c("Error in command", new->letter, command_string, NULL);
 
@@ -571,6 +570,93 @@ parse_command(char *command_string) {
 
       if (new->letter == 'y' && new->s1.length != new->s2.length)
         panic("Strings in y-command must have equal length", command_string, NULL);
+
+      free(buf);
+      break;
+
+    case 't':
+      // compile the two regular expressions
+      // make sure they have the same number of groups
+      if (strlen(command_string) < 4) panic_c("Error in command", new->letter, command_string, NULL);
+
+      buf = xmalloc((4 * INPUT_BUFFER_LOW) + 1);
+
+      slash_char = command_string[1];
+      p = command_string;
+      p += 2;
+      j = 0;
+      while (*p != 0 && *p != slash_char && j < 4 * INPUT_BUFFER_LOW) buf[j++] = *p++;
+      if (*p != slash_char) panic_c("Error in command, no middle '/'", new->letter, command_string, NULL);
+      buf[j] = 0;
+      parse_string(buf, &new->s1);
+      if (new->s1.length > INPUT_BUFFER_LOW) panic("String in command too long", command_string, NULL);
+      if (new->s1.length == 0) panic_c("Error in command, search size 0", new->letter, command_string, NULL);
+
+      p++;
+
+      j = 0;
+      while (*p != 0 && *p != slash_char && j < 4 * INPUT_BUFFER_LOW) buf[j++] = *p++;
+      buf[j] = 0;
+      if (*p != slash_char) panic_c("Error in command, no closing", new->letter, command_string, NULL);
+      parse_string(buf, &new->s2);
+      if (new->s2.length > INPUT_BUFFER_LOW) panic_c("String in command too long", new->letter, command_string, NULL);
+
+      regex_t reg;
+      unsigned int replacements = 0;
+      if (regcomp(&reg, new->s1.string, REG_EXTENDED) != 0) {
+          panic_c("cannot compile pattern", new->letter, new->s1.string, NULL);
+      }
+      size_t matchCnt = reg.re_nsub;
+      regmatch_t m[matchCnt + 1];
+      const char *rpl, *p;
+      // count back references in replace
+      int refCnt = 0;
+      p = replace;
+      while(1) {
+        while(*++p > 31);
+        if(*p) refCnt++;
+        else break;
+      }
+      // if refCnt is not equal to matchCnt, fail
+      if(refCnt != matchCnt) {
+        regfree(&reg);
+        panic_c("search and replace have different sizes", new->letter, command_string, NULL);
+      }
+      // make substitutions
+      char *new;
+      char *search_start = *str;
+      while(!regexec(&reg, search_start, matchCnt + 1, m, REG_NOTBOL)) {
+        // make enough room
+        new = (char *)malloc(strlen(*str) + strlen(replace));
+        if(!new) exit(EXIT_FAILURE);
+        *new = '\0';
+        strncat(new, *str, search_start - *str);
+        p = rpl = replace;
+        int c;
+        strncat(new, search_start, m[0].rm_so); // test before pattern
+        for(int k=0; k < matchCnt; k++) {
+          while(*++p > 31); // skip printable char
+          c = *p;  // back reference (e.g. \1, \2, ...)
+          strncat(new, rpl, p - rpl); // add head of rpl
+          // concat match
+          strncat(new, search_start + m[c].rm_so, m[c].rm_eo - m[c].rm_so);
+          rpl = p++; // skip back reference, next match
+        }
+        strcat(new, p ); // trailing of rpl
+        unsigned int new_start_offset = strlen(new);
+        strcat(new, search_start + m[0].rm_eo); // trailing text in *str
+        free(*str);
+        *str = (char *)malloc(strlen(new)+1);
+        strcpy(*str,new);
+        search_start = *str + new_start_offset;
+        free(new);
+        replacements++;
+
+        regfree(&reg);
+        // ajust size
+        *str = (char *)realloc(*str, strlen(*str) + 1);
+        return replacements;
+      }
       free(buf);
       break;
     case 'F':

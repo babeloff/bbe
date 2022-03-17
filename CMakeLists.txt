@@ -4,6 +4,10 @@ project(bbe C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
+#find_package(REGEX_INCLUDE_DIR)
+#include(CMakeFindDependencyMacro)
+#find_dependency(MSYS2 2.2 REQUIRED COMPONENTS regex)
+
 include(CheckIncludeFile)
 check_include_file(config.h HAVE_CONFIG_H)
 check_include_file(features.h HAVE_FEATURES_H)
@@ -11,6 +15,7 @@ check_include_file(errno.h HAVE_ERRNO_H)
 check_include_file(error.h HAVE_ERROR_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
+check_include_file(regex.h HAVE_REGEX_H)
 check_include_file(strings.h HAVE_STRINGS_H)
 check_include_file(getopt.h HAVE_GETOPT_H)
 check_include_file(stdio.h HAVE_STDIO_H)
@@ -38,6 +43,9 @@ endif ()
 if (BBE_ENABLE_DOC)
 
     set (BBE_DOCDIR ${CMAKE_CURRENT_SOURCE_DIR}/doc)
+    set (CMAKE_INSTALL_DOCDIR ${CMAKE_CURRENT_SOURCE_DIR}/install/doc)
+    set (CMAKE_INSTALL_MANDIR ${CMAKE_CURRENT_SOURCE_DIR}/install/man)
+
     set (BBE_STYLESHEET ${BBE_DOCDIR}/stylesheet.css)
     set (BBE_TITLE ${PROJECT_NAME} ${BBE_PACKAGE_VERSION})
     set (BBE_A2M ${ASCIIDOCTOR_EXE} -b manpage -amanmanual='${BBE_TITLE}')
@@ -68,10 +76,9 @@ if (BBE_ENABLE_DOC)
                 FILES ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.${SECT}
                 DESTINATION ${CMAKE_INSTALL_MANDIR}/man${SECT}
         )
-
     endmacro (add_bbe_man)
 
-    add_bbe_man (bbe_errno 3)
+    add_bbe_man (bbe_manpage 3)
 
     add_custom_target (man ALL DEPENDS ${BBE_MANS})
     add_custom_target (html ALL DEPENDS ${BBE_HTMLS})
