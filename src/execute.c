@@ -734,7 +734,7 @@ execute_program(struct commands *commands)
     {
         reset_rpos(commands->byte);
         delete_this_block = 0;
-        if (commands->block_start->letter == 'K') {
+        if (commands->block_start != NULL && commands->block_start->letter == 'K') {
            delete_this_block = 1;
         }
         out_buffer.block_offset = 0;

@@ -158,10 +158,13 @@ Delete _M_ bytes starting from the offset _N_.
 If '*' is defined instead of _M_, then all bytes starting from _N_ are deleted.
 
 c _FROM_ _TO_::
-Convert bytes from format _FROM_ into _TO_. 
-Currently supported formats are: 
-BCD:: Binary coded decimal
-ASC:: Ascii
+Convert bytes from format _FROM_ into format _TO_.
+
+[cols="1,4",frame="none",grid="none",caption="Currently supported formats"]
+|===
+|*BCD* | Binary coded decimal
+|*ASC* | Ascii
+|===
 
 j _N_::
 Commands after the j-command are ignored for first _N_ bytes of the block.

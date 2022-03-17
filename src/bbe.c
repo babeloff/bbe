@@ -293,7 +293,7 @@ parse_string(char *string,struct pattern *target)
         }
         i++;
     }
-    if(i)       
+    if(i > 0)
     {
         target->string = (unsigned char *) xmalloc(i);
         memcpy(target->string,buf,i);
@@ -306,7 +306,9 @@ parse_string(char *string,struct pattern *target)
 }
 
 
-/* parse a block definition and save it to block */
+/**
+ * parse a block definition and save it to block
+ */
 static void
 parse_block(char *bs, int length)
 {
@@ -323,21 +325,19 @@ parse_block(char *bs, int length)
 
     buf=xmalloc(2*4*INPUT_BUFFER_LOW);
     block.type = 0;
-    block.start.N = -1;
-  block.start.S.length = 0;
-  block.start.S.string = NULL;
-    block.stop.M = -1;
-  block.stop.S.length = 0;
-  block.stop.S.string = NULL;
+    // note: the block start and stop are a union so the initial values are irrelevant.
 
     if (*p == ':')
     {
-        block.start.S.length = 0;
+        // no start block is provided.
+        // the start block defaults to immediate.
         block.type |= BLOCK_START_S;
+        block.start.S.length = 0;
     } else
     {
         if(*p == 'x' || *p == 'X' || isdigit(*p))
         {
+            block.type |= BLOCK_START_M;
             switch(*p)
             {
                 case 'x':
@@ -356,16 +356,15 @@ parse_block(char *bs, int length)
 
             buf[i] = 0;
             block.start.N = parse_long(buf);
-            block.type |= BLOCK_START_M;
         } else                                // string start
         {
+            block.type |= BLOCK_START_S;
             slash_char = *p;
             p++;
             while(*p != slash_char && *p != 0) buf[i++] = *p++;
             if (*p == slash_char) p++;
             buf[i] = 0;
             parse_string(buf,&block.start.S);
-            block.type |= BLOCK_START_S;
         }
     } 
 
@@ -376,15 +375,12 @@ parse_block(char *bs, int length)
 
     p++;
 
-    if (p == after)
+    if (p < after)
     {
-        block.stop.S.length = 0;
-        block.type |= BLOCK_STOP_S;
-    } else
-    { 
         i = 0;
         if (*p == 'x' || *p == 'X' || isxdigit(*p))
         {
+            block.type |= BLOCK_STOP_M;
             switch(*p)
             {
                 case 'x':
@@ -403,9 +399,9 @@ parse_block(char *bs, int length)
             buf[i] = 0;
             block.stop.M = parse_long(buf);
             if(block.stop.M == 0) panic("Block length must be greater than zero",NULL,NULL);
-            block.type |= BLOCK_STOP_M;
         } else
         {
+            block.type |= BLOCK_STOP_S;
             if(*p == '$')
             {
                 block.stop.S.length = 0;
@@ -424,10 +420,12 @@ parse_block(char *bs, int length)
                 }
                 buf[i] = 0;
                 parse_string(buf,&block.stop.S);
-                block.type |= BLOCK_STOP_S;
             }
         }
-    } 
+    } else {
+      block.type |= BLOCK_STOP_S;
+      block.stop.S.length = 0;
+    }
     if (p != after)
     {
         panic("syntax error in block definition",bs,NULL);
@@ -445,7 +443,6 @@ parse_command(char *command_string)
     char *token[MAX_TOKEN];
     char slash_char;
     int i,j;
-
    
     p = command_string;
     while(isspace(*p)) p++;              // remove leading spaces
