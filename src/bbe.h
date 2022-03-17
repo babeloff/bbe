@@ -77,24 +77,23 @@
 
 /* structs */
 
+struct pattern {
+  unsigned char * string;
+  off_t length;
+};
+
 /* Block definition */
 struct block {
     int type;
     union
     {
         off_t N;
-        struct {
-            unsigned char *string;
-            off_t length;
-        } S;
+        struct pattern S;
     } start;
     union
     {
         off_t M;
-        struct {
-            unsigned char *string;
-            off_t length;
-        } S;
+        struct pattern S;
     } stop;
 };
 
@@ -104,10 +103,8 @@ struct command_list {
     char letter;            // command letter (D,A,s,..)
     off_t offset;           // n for D,r,i and d commands
     off_t count;            // count for d command
-    unsigned char *s1;      // string for A,I,r,i,s,w and y commands
-    off_t s1_len;
-    unsigned char *s2;      // replace for s and dest for y
-    off_t s2_len;
+    struct pattern s1;      // string for A,I,r,i,s,w and y commands
+    struct pattern s2;      // replace for s and dest for y
     int rpos;               // replace position for s,r and y
     off_t fpos;             // found pos for s-command
     FILE *fd;               // stream for w command

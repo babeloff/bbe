@@ -145,7 +145,7 @@ execute_commands(struct command_list *c)
         {
             case 'A':
             case 'I':
-                write_buffer(c->s1,c->s1_len);
+                write_buffer(c->s1.string,c->s1.length);
                 break;
             case 'd':
                 if(c->rpos || c->offset == in_buffer.block_offset) 
@@ -179,17 +179,17 @@ execute_commands(struct command_list *c)
                     inserting = 1;
                     break;
                 } 
-                if(c->rpos > 0 && c->rpos <= c->s1_len)
+                if(c->rpos > 0 && c->rpos <= c->s1.length)
                 {
-                    if(c->rpos <= c->s1_len)
+                    if(c->rpos <= c->s1.length)
                     {
-                        put_byte(c->s1[c->rpos - 1]);
+                        put_byte(c->s1.string[c->rpos - 1]);
                         if(delete_this_byte)
                         {
                             delete_this_byte = 0;
                         } else 
                         {
-                            if(c->rpos < c->s1_len) inserting = 1;
+                            if(c->rpos < c->s1.length) inserting = 1;
                         }
                     }
                     c->rpos++;
@@ -197,18 +197,18 @@ execute_commands(struct command_list *c)
                 break;
             case 'r':
                 if(in_buffer.block_offset >= c->offset &&
-                        in_buffer.block_offset < c->offset + c->s1_len)
+                        in_buffer.block_offset < c->offset + c->s1.length)
                 {
-                    put_byte(c->s1[in_buffer.block_offset - c->offset]);
+                    put_byte(c->s1.string[in_buffer.block_offset - c->offset]);
                 }
                 break;
             case 's':
                 if(c->rpos)
                 {
-                    if(c->rpos < c->s1_len && c->rpos < c->s2_len)
+                    if(c->rpos < c->s1.length && c->rpos < c->s2.length)
                     {
-                        put_byte(c->s2[c->rpos]);
-                    } else if (c->rpos < c->s1_len && c->rpos >= c->s2_len)
+                        put_byte(c->s2.string[c->rpos]);
+                    } else if (c->rpos < c->s1.length && c->rpos >= c->s2.length)
                     {
                         if(inserting)
                         {
@@ -217,12 +217,12 @@ execute_commands(struct command_list *c)
                         {
                             delete_this_byte = 1;
                         }
-                    } else if(c->rpos >= c->s1_len && c->rpos < c->s2_len)
+                    } else if(c->rpos >= c->s1.length && c->rpos < c->s2.length)
                     {
-                        put_byte(c->s2[c->rpos]);
+                        put_byte(c->s2.string[c->rpos]);
                     } 
 
-                        if(c->rpos >= c->s1_len - 1 && c->rpos < c->s2_len - 1)
+                        if(c->rpos >= c->s1.length - 1 && c->rpos < c->s2.length - 1)
                         {
                             if(delete_this_byte)
                             {
@@ -234,7 +234,7 @@ execute_commands(struct command_list *c)
                         }
 
                         c->rpos++;
-                        if(c->rpos >= c->s1_len && c->rpos >= c->s2_len)
+                        if(c->rpos >= c->s1.length && c->rpos >= c->s2.length)
                         {
                             c->rpos = 0;
                         }
@@ -244,26 +244,26 @@ execute_commands(struct command_list *c)
                 if(c->fpos == in_buffer.block_offset) break;
                 p = out_buffer.write_pos;
                 i = 0;
-                while(*p == c->s1[i] && i < c->s1_len)
+                while(*p == c->s1.string[i] && i < c->s1.length)
                 {
                     if(p == out_buffer.write_pos) p = read_pos();
-                    if(p == block_end_pos() && c->s1_len - 1 > i) break;
+                    if(p == block_end_pos() && c->s1.length - 1 > i) break;
                     i++;
                     p++;
                 }
-                if(i == c->s1_len) 
+                if(i == c->s1.length) 
                 {
                     c->fpos = in_buffer.block_offset;
-                    if(c->s1_len > 1 || c->s2_len > 1) c->rpos = 1;
-                    if(c->s2_len) 
+                    if(c->s1.length > 1 || c->s2.length > 1) c->rpos = 1;
+                    if(c->s2.length) 
                     {
-                        put_byte(c->s2[0]);
+                        put_byte(c->s2.string[0]);
                         if(delete_this_byte)
                         {
                             delete_this_byte = 0;
                         } else
                         {
-                            if(c->s1_len == 1 && c->s2_len > 1) inserting = 1;
+                            if(c->s1.length == 1 && c->s2.length > 1) inserting = 1;
                         }
                     } else
                     {
@@ -279,14 +279,14 @@ execute_commands(struct command_list *c)
                 break;
             case 'y':
                 i = 0;
-                while(c->s1[i] != *out_buffer.write_pos && i < c->s1_len) i++;
-                if(c->s1[i] == *out_buffer.write_pos && i < c->s1_len) put_byte(c->s2[i]);
+                while(c->s1.string[i] != *out_buffer.write_pos && i < c->s1.length) i++;
+                if(c->s1.string[i] == *out_buffer.write_pos && i < c->s1.length) put_byte(c->s2.string[i]);
                 break;
             case 'c':
-                switch(c->s1[0])
+                switch(c->s1.string[0])
                 {
                     case 'A':                   // from ascii
-                        switch(c->s1[3])
+                        switch(c->s1.string[3])
                         {
                             case 'B':           // to bcd
                                 if(c->rpos || (last_byte() && out_buffer.block_offset == 0))     // skip first nibble
@@ -326,7 +326,7 @@ execute_commands(struct command_list *c)
                         }
                         break;
                     case 'B':               // from bcd
-                        switch(c->s1[3])
+                        switch(c->s1.string[3])
                         {
                             case 'A':       // to ascii
                                 if(((*out_buffer.write_pos >> 4) & 0x0f) <= 9 && 
@@ -382,12 +382,12 @@ execute_commands(struct command_list *c)
                 if (delete_this_byte) break;
                 i = 0;
                 a = *out_buffer.write_pos;
-                while(i < c->s1_len)
+                while(i < c->s1.length)
                 {
-                    str = byte_to_string(a,c->s1[i]);
+                    str = byte_to_string(a,c->s1.string[i]);
                     write_string(str);
                     i++;
-                    if (i < c->s1_len) 
+                    if (i < c->s1.length) 
                     {
                         put_byte('-');
                         write_next_byte();
@@ -396,13 +396,13 @@ execute_commands(struct command_list *c)
                 put_byte(' ');
                 break;
             case 'F':
-                str = off_t_to_string(in_buffer.stream_offset + (off_t) (in_buffer.read_pos-in_buffer.buffer),c->s1[0]);
+                str = off_t_to_string(in_buffer.stream_offset + (off_t) (in_buffer.read_pos-in_buffer.buffer),c->s1.string[0]);
                 write_string(str);
                 put_byte(':');
                 write_next_byte();
                 break;
             case 'B':
-                str = off_t_to_string(in_buffer.block_num,c->s1[0]);
+                str = off_t_to_string(in_buffer.block_num,c->s1.string[0]);
                 write_string(str);
                 put_byte(':');
                 write_next_byte();
@@ -413,20 +413,20 @@ execute_commands(struct command_list *c)
                 write_next_byte();
                 break;
             case '&':
-                put_byte(*out_buffer.write_pos & c->s1[0]);
+                put_byte(*out_buffer.write_pos & c->s1.string[0]);
                 break;
             case '|':
-                put_byte(*out_buffer.write_pos | c->s1[0]);
+                put_byte(*out_buffer.write_pos | c->s1.string[0]);
                 break;
             case '^':
-                put_byte(*out_buffer.write_pos ^ c->s1[0]);
+                put_byte(*out_buffer.write_pos ^ c->s1.string[0]);
                 break;
             case '~':
                 put_byte(~*out_buffer.write_pos);
                 break;
             case '<':
             case '>':
-                if (fseeko(c->fd,0,SEEK_SET)) panic("Cannot seek file",c->s1,strerror(errno));
+                if (fseeko(c->fd,0,SEEK_SET)) panic("Cannot seek file",c->s1.string,strerror(errno));
                 do
                 {
                     read_count = fread(ioblock,1,IO_BLOCK_SIZE,c->fd);
@@ -436,13 +436,13 @@ execute_commands(struct command_list *c)
             case 'u':
                 if(in_buffer.block_offset <= c->offset)
                 {
-                    put_byte(c->s1[0]);
+                    put_byte(c->s1.string[0]);
                 }
                 break;
             case 'f':
                 if(in_buffer.block_offset >= c->offset)
                 {
-                    put_byte(c->s1[0]);
+                    put_byte(c->s1.string[0]);
                 }
                 break;
             case 'w':
@@ -469,7 +469,7 @@ write_w_command(unsigned char *buf,size_t length)
     {
         if(c->letter == 'w')
         {
-            if(fwrite(buf,1,length,c->fd) != length) panic("Cannot write to file",c->s2,strerror(errno));
+            if(fwrite(buf,1,length,c->fd) != length) panic("Cannot write to file",c->s2.string,strerror(errno));
             if(length) c->count = 1;    // file was written
         }
         c = c->next;
@@ -547,15 +547,15 @@ open_w_files(off_t block_number)
         {
             if(c->fd != NULL) 
             {
-                if(fclose(c->fd) != 0) panic("Error closing file",c->s2,strerror(errno));
-                if (!c->count && c->s2 != NULL)  // remove if empty
+                if(fclose(c->fd) != 0) panic("Error closing file",c->s2.string,strerror(errno));
+                if (!c->count && c->s2.string != NULL)  // remove if empty
                 {
-                    unlink(c->s2);
+                    unlink(c->s2.string);
                 }
                 c->fd = NULL;
             }
 
-            bn_printf(file,c->s1,block_number);
+            bn_printf(file,c->s1.string,block_number);
 
 #ifdef WIN32
           errno_t rc = fopen_s(&c->fd, file,"wb");
@@ -565,8 +565,8 @@ open_w_files(off_t block_number)
             if(c->fd == NULL) panic("Cannot open file for writing",file,strerror(errno));
 #endif
             c->count = 0;
-            if(c->s2 != NULL) free(c->s2);
-            c->s2 = xstrdup(file);
+            if(c->s2.string != NULL) free(c->s2.string);
+            c->s2.string = xstrdup(file);
         }
         c = c->next;
     }
@@ -574,7 +574,7 @@ open_w_files(off_t block_number)
 
                 
 
-/* init_commands, initialize those wich need it, currently w - open file and rpos=0 for all */
+/* init_commands, initialize those which need it, currently w - open file and rpos=0 for all */
 void
 init_commands(struct commands *commands)
 {
@@ -588,23 +588,23 @@ init_commands(struct commands *commands)
         switch(c->letter)
         {
             case 'w':
-                if(find_block_w_file(c->s1,&wlen) != NULL)
+                if(find_block_w_file(c->s1.string,&wlen) != NULL)
                 {
                     c->fd = NULL;
                     c->offset = 1;
                     w_commands_block_num = 1;
-                    c->s2 = NULL;
+                    c->s2.string = NULL;
                 } else
                 {
 #ifdef WIN32
-                  errno_t rc = fopen_s(&c->fd, c->s1,"wb");
-                  if (rc != 0) panic("Cannot open file for writing",c->s1,strerror(rc));
+                  errno_t rc = fopen_s(&c->fd, c->s1.string,"wb");
+                  if (rc != 0) panic("Cannot open file for writing",c->s1.string,strerror(rc));
 #else
                     c->fd = fopen(c->s1,"w");
                     if(c->fd == NULL) panic("Cannot open file for writing",c->s1,strerror(errno));
 #endif
                     c->offset = 0;
-                    c->s2 = xstrdup(c->s1);
+                    c->s2.string = xstrdup(c->s1.string);
                 }
                 c->count = 0;
                 break;
@@ -620,8 +620,8 @@ init_commands(struct commands *commands)
         {
             case '>': {
 #ifdef WIN32
-              errno_t rc = fopen_s(&c->fd, c->s1, "rb");
-              if (rc != 0) panic("Cannot open for reading", c->s1, strerror(rc));
+              errno_t rc = fopen_s(&c->fd, c->s1.string, "rb");
+              if (rc != 0) panic("Cannot open for reading", c->s1.string, strerror(rc));
 #else
               c->fd = fopen(c->s1,"r");
               if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
@@ -640,8 +640,8 @@ init_commands(struct commands *commands)
         {
             case '<': {
 #ifdef WIN32
-              errno_t rc = fopen_s(&c->fd, c->s1, "rb");
-              if (rc != 0) panic("Cannot open for reading", c->s1, strerror(rc));
+              errno_t rc = fopen_s(&c->fd, c->s1.string, "rb");
+              if (rc != 0) panic("Cannot open for reading", c->s1.string, strerror(rc));
 #else
               c->fd = fopen(c->s1,"r");
               if(c->fd == NULL) panic("Cannot open file for reading",c->s1,strerror(errno));
@@ -670,10 +670,10 @@ close_commands(struct commands *commands)
             case 'w':
                 if(c->fd != NULL)
                 {
-                    if(fclose(c->fd) != 0) panic("Error in closing file",c->s2,strerror(errno));
-                    if(!c->count && c->s2 != NULL)
+                    if(fclose(c->fd) != 0) panic("Error in closing file",c->s2.string,strerror(errno));
+                    if(!c->count && c->s2.string != NULL)
                     {
-                        unlink(c->s2);
+                        unlink(c->s2.string);
                     }
                 }
                 break;

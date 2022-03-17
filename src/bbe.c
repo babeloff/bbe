@@ -132,7 +132,7 @@ panic_c(char *msg,char action,char *info,char *syserror)
 {
   if(panic_info != NULL) fprintf(stderr,"%s: %s",program,panic_info);
 
-  if (action == NULL)
+  if (action == '\0')
     if (info == NULL)
       if (syserror == NULL)
         fprintf(stderr,"%s: %s\n",program,msg);
@@ -201,10 +201,12 @@ parse_long(char *long_int)
     return (off_t) l;
 }
 
-/* parse a string, string can contain \n, \xn, \0n and \\
-   escape codes. memory will be allocated */
-unsigned char *
-parse_string(char *string,off_t *length)
+/**
+ * parse a string, string can contain \n, \xn, \0n and \\ escape codes.
+ * memory will be allocated
+ */
+struct pattern
+parse_string(char *string,struct pattern *target)
 {
     char *p;
     int j,k,i = 0;
@@ -293,14 +295,14 @@ parse_string(char *string,off_t *length)
     }
     if(i)       
     {
-        ret = (unsigned char *) xmalloc(i);
-        memcpy(ret,buf,i);
+        target->string = (unsigned char *) xmalloc(i);
+        memcpy(target->string,buf,i);
     } else
     {
-        ret = NULL;
+        target->string = NULL;
     }
-    *length = i;
-    return ret;
+    target->length = i;
+    return *target;
 }
 
 
@@ -322,9 +324,11 @@ parse_block(char *bs, int length)
     buf=xmalloc(2*4*INPUT_BUFFER_LOW);
     block.type = 0;
     block.start.N = -1;
-    block.start.S.length = 0;
+  block.start.S.length = 0;
+  block.start.S.string = NULL;
     block.stop.M = -1;
-    block.stop.S.length = 0;
+  block.stop.S.length = 0;
+  block.stop.S.string = NULL;
 
     if (*p == ':')
     {
@@ -360,7 +364,7 @@ parse_block(char *bs, int length)
             while(*p != slash_char && *p != 0) buf[i++] = *p++;
             if (*p == slash_char) p++;
             buf[i] = 0;
-            block.start.S.string = parse_string(buf,&block.start.S.length);
+            parse_string(buf,&block.start.S);
             block.type |= BLOCK_START_S;
         }
     } 
@@ -419,7 +423,7 @@ parse_block(char *bs, int length)
                     panic("syntax error in block definition",bs,NULL);
                 }
                 buf[i] = 0;
-                block.stop.S.string = parse_string(buf,&block.stop.S.length);
+                parse_string(buf,&block.stop.S);
                 block.type |= BLOCK_STOP_S;
             }
         }
@@ -507,13 +511,13 @@ parse_command(char *command_string)
         case 'A':
         case 'I':
             if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command ",new->letter,command_string,NULL);
-            new->s1 = parse_string(token[1],&new->s1_len);
+            parse_string(token[1],&new->s1);
             break;
         case 'w':
         case '<':
         case '>':
             if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
-            new->s1 = xstrdup(token[1]);
+            new->s1.string = xstrdup(token[1]);
             break;
         case 'j':
         case 'J':
@@ -529,7 +533,7 @@ parse_command(char *command_string)
         case 'i':
             if(i != 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->offset = parse_long(token[1]);
-            new->s1 = parse_string(token[2],&new->s1_len);
+            parse_string(token[2],&new->s1);
             break;
         case 'd':
             if(i < 2 || i > 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
@@ -547,16 +551,16 @@ parse_command(char *command_string)
         case 'c':
             if(i != 3 || strlen(token[1]) != 3 || strlen(token[2]) != 3 || strlen(token[0]) > 1)
               panic_c("Error in command",new->letter,command_string,NULL);
-            new->s1 = xmalloc(strlen(token[1]) + strlen(token[2]) + 2);
-            strcpy(new->s1,token[1]);
-            strcat(new->s1,token[2]);
+            new->s1.string = xmalloc(strlen(token[1]) + strlen(token[2]) + 2);
+            strcpy(new->s1.string,token[1]);
+            strcat(new->s1.string,token[2]);
             j = 0;
-            while(new->s1[j] != 0) {
-                new->s1[j] = toupper(new->s1[j]);
+            while(new->s1.string[j] != 0) {
+                new->s1.string[j] = toupper(new->s1.string[j]);
                 j++;
             }
             j = 0;
-            while(*convert_strings[j] != 0 && strcmp(convert_strings[j],new->s1) != 0) j++;
+            while(*convert_strings[j] != 0 && strcmp(convert_strings[j],new->s1.string) != 0) j++;
             if(*convert_strings[j] == 0) panic_c("Unknown conversion",new->letter,command_string,NULL);
             break;
         case 's':
@@ -572,9 +576,9 @@ parse_command(char *command_string)
             while(*p != 0 && *p != slash_char && j < 4*INPUT_BUFFER_LOW) buf[j++] = *p++;
             if(*p != slash_char) panic_c("Error in command",new->letter,command_string,NULL);
             buf[j] = 0;
-            new->s1 = parse_string(buf,&new->s1_len);
-            if(new->s1_len > INPUT_BUFFER_LOW) panic("String in command too long",command_string,NULL);
-            if(new->s1_len == 0) panic_c("Error in command",new->letter,command_string,NULL);
+            parse_string(buf,&new->s1);
+            if(new->s1.length > INPUT_BUFFER_LOW) panic("String in command too long",command_string,NULL);
+            if(new->s1.length == 0) panic_c("Error in command",new->letter,command_string,NULL);
 
             p++;
 
@@ -582,10 +586,10 @@ parse_command(char *command_string)
             while(*p != 0 && *p != slash_char && j < 4*INPUT_BUFFER_LOW) buf[j++] = *p++;
             buf[j] = 0;
             if(*p != slash_char) panic_c("Error in command",new->letter,command_string,NULL);
-            new->s2 = parse_string(buf,&new->s2_len);
-            if(new->s2_len > INPUT_BUFFER_LOW) panic_c("String in command too long",new->letter,command_string,NULL);
+            parse_string(buf,&new->s2);
+            if(new->s2.length > INPUT_BUFFER_LOW) panic_c("String in command too long",new->letter,command_string,NULL);
 
-            if(new->letter == 'y' && new->s1_len != new->s2_len) panic("Strings in y-command must have equal length",command_string,NULL);
+            if(new->letter == 'y' && new->s1.length != new->s2.length) panic("Strings in y-command must have equal length",command_string,NULL);
             free(buf);
             break;
         case 'F':
@@ -593,10 +597,10 @@ parse_command(char *command_string)
             if(i > 1 && (strlen(token[1]) != 1)) panic_c("Error in command",new->letter,command_string,NULL);
         case 'p':
             if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
-            new->s1 = parse_string(token[1],&new->s1_len);
+            parse_string(token[1],&new->s1);
             j = 0;
-            while(new->s1[j] != 0) {
-                new->s1[j] = toupper(new->s1[j]);
+            while(new->s1.string[j] != 0) {
+                new->s1.string[j] = toupper(new->s1.string[j]);
                 j++;
             }
             if (new->letter == 'p') 
@@ -606,7 +610,7 @@ parse_command(char *command_string)
             {
                 f = FB_formats;
             }
-            while(*f != 0 && strchr(new->s1,*f) == NULL) f++;
+            while(*f != 0 && strchr(new->s1.string,*f) == NULL) f++;
             if (*f == 0) panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case 'N':
@@ -616,8 +620,8 @@ parse_command(char *command_string)
         case '|':
         case '^':
             if(i != 2 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
-            new->s1 = parse_string(token[1],&new->s1_len);
-            if(new->s1_len != 1)  panic_c("Error in command",new->letter,command_string,NULL);
+            parse_string(token[1],&new->s1);
+            if(new->s1.length != 1)  panic_c("Error in command",new->letter,command_string,NULL);
             break;
         case '~':
         case 'x':
@@ -627,8 +631,8 @@ parse_command(char *command_string)
         case 'f':
             if(i != 3 || strlen(token[0]) > 1) panic_c("Error in command",new->letter,command_string,NULL);
             new->offset = parse_long(token[1]);
-            new->s1 = parse_string(token[2],&new->s1_len);
-            if(new->s1_len != 1)  panic_c("Error in command",new->letter,command_string,NULL);
+            parse_string(token[2],&new->s1);
+            if(new->s1.length != 1)  panic_c("Error in command",new->letter,command_string,NULL);
             break;
         default:
             panic_c("Unknown command",new->letter,command_string,NULL);

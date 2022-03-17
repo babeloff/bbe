@@ -374,8 +374,10 @@ end_of_stream()
     return 1;
 }
 
-/* read for stream to input buffer and advance the read_pos to the start of the buffer */
-/* in_buffer.read_pos should point to last byte of previous block */
+/**
+ * read for stream to input buffer and advance the read_pos to the start of the buffer
+ * in_buffer.read_pos should point to last byte of previous block
+ */
 int
 find_block()
 {
@@ -393,7 +395,6 @@ find_block()
     }
     
     in_buffer.block_offset = 0;
-
 
     do
     {

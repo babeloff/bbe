@@ -1,0 +1,235 @@
+= bbe(1)
+:author: Timo Savinen
+:email: Timo Savinen <tjsa@iki.fi>
+:doctype: manpage
+:manmanual: BBE
+:mansource: BBE
+:man-linkstyle: pass:[blue R < >]
+:revnumber: 0.2.3
+:revdate: 2022-03-07
+:revremark: 3.1 Update for {doctitle} in AsciiDoc
+:keywords: binary sed
+:toc:
+:toc-title: Table of Contents
+:sectnums:
+:sectanchors:
+:sectlinks:
+:sectids:
+:idprefix:
+:idseparator: -
+:imagesdir: images
+
+== Name
+
+bbe - binary block editor
+
+== Synopsis
+
+*bbe* [_OPTION_]... _FILE_
+
+== Description
+
+*bbe* is a sed-like editor for binary files. 
+It performs binary transformations on the blocks of input stream.
+
+== Options
+
+*bbe* accepts the following options:
+
+*-b, --block*=_BLOCK_::
+Block definition.
+
+*-e, --expression*=_COMMAND_::
+Add the COMMAND to the commands to be executed.
+
+*-f, --file*=_SCRIPT_FILE_::
+Add the contents of script-file to commands.
+
+*-o, --output*=_name_::
+Write output to _name_ instead of standard output.
+
+*-s, --suppress*::
+Suppress normal output, print only block contents.
+
+*-?, --help::
+List all available options and their meanings.
+
+*-V, --version*::
+Show version of program.
+
+*BLOCK* can be defined as:
+
+*N:M*::
+Where *N*'th byte starts an *M* bytes long block (first byte is 0).
+
+*:M*::
+Block length in input stream is *M*.
+
+*/start/:M*::
+String *start* starts *M* bytes long block.
+
+*/start/:/stop/*::
+String *start* starts the block and block ends at string *stop*.
+
+*/start/:*::
+String *start* starts the block and block will end at next occurrence of *start*. Only the first *start* is included to the block.
+
+*:/stop/*::
+Block starts at the beginning of input stream (or at the end of previous block) and ends at the next occurrence of *stop*. String *stop* will be included to the block.
+
+Special value '$' of *M* means the end of stream. 
+ 
+Default value for block is 0:$, meaning the whole input stream.
+
+Both *start* and *stop* strings are included in block. 
+Non-printable characters can be escaped as
+
+\nnn::: decimal
+\xnn::: hexadecimal
+\0nnn::: octal
+
+Character '\' can be escaped as '\\'. 
+Escape codes '\a','\b','\t','\n','\v','\f','\r' and '\;' can also be used.
+
+Length (*N* and *M*) can be defined as decimal (n), hexadecimal (xn) or octal (0n) value.
+
+== COMMAND SYNOPSIS
+
+*bbe* has two type of commands: block and byte commands, both are always related to current block. 
+That means that the input stream outside blocks remains untouched. 
+
+=== Block commands
+
+D [_N_]::
+Delete the _N_'th block. Without _N_, all found blocks are deleted from the output stream.
+
+I _STRING_::
+Insert the '_STRING_' before the block.
+
+A _STRING_::
+Append the '_STRING_' at the end of block.
+
+J _N_::
+Skip _N_ blocks, before executing commands after this command.
+
+L _N_::
+Leave all blocks unmodified starting from block number _N_. 
+Affects only commands after this command.
+
+N::
+Before printing a block, the file name in which the block starts is printed.
+
+F _F_::
+Before printing a block, the input stream offset at the beginning of the block is printed.
+_F_ can be 'H', 'D' or 'O' for Hexadecimal, Decimal or Octal format of offset.
+
+B _F_::
+Before printing a block, the block number is printed (first block == 1).
+_F_ can be 'H', 'D' or 'O' for Hexadecimal, Decimal or Octal format of block number.
+
+> _FILE_::
+Before printing a block, the contents of _FILE_ are printed.
+
+< _FILE_::
+After printing a block, the contents of _FILE_ are printed.
+
+=== Byte commands
+
+_N_ in byte commands is the offset from the beginning of current block (starts from zero).
+
+r _N_ _STRING_::
+Replace bytes starting at position _N_ with _STRING_.
+
+i _N_ _STRING_::
+Insert _STRING_ starting at position _N_.
+
+p _FORMAT_::
+The contents of block is printed in format defined by _FORMAT_. 
+_FORMAT_ can have any of the formats 'H', 'D', 'O', 'A' and 'B' for Hexadecimal, Decimal, Octal, Ascii and Binary.
+
+s/*search*/*replace*/::
+Replace all occurrences of *search* with *replace*.
+
+y/*source*/*dest*/::
+Translate bytes in *source* to the corresponding bytes in *dest*. *Source* and *dest* must be the same length.
+
+d _N_ _M_|*::
+Delete _M_ bytes starting from the offset _N_. 
+If '*' is defined instead of _M_, then all bytes starting from _N_ are deleted.
+
+c _FROM_ _TO_::
+Convert bytes from format _FROM_ into _TO_. 
+Currently supported formats are: 
+BCD:: Binary coded decimal
+ASC:: Ascii
+
+j _N_::
+Commands after the j-command are ignored for first _N_ bytes of the block.
+
+l _N_::
+Commands after the l-command are ignored from _N_'th byte of the block.
+
+w _FILE_::
+Write bytes from the current block to _FILE_. 
+Commands before w-command have what will be written. 
+%B or %nB in  _FILE_ will be replaced by current block number. 
+n in %nB is field length,
+leading zero in n causes the block number to be left padded with zeroes.
+
+& _C_::
+Performs binary *and* with _C_.
+
+| _C_::
+Performs binary *or* with _C_.
+
+^ _C_::
+Performs binary *xor* with _C_.
+
+~::
+Performs binary negation.
+
+u _N_ _C_::
+All bytes from start of the block to offset _N_ are replaced by _C_.
+
+f _N_ _C_::
+All bytes starting from offset _N_ to end of the block are replaced by _C_.
+
+x::
+Exchange the contents of nibbles (half an octet) of bytes.
+
+Non-visible characters in strings can be escaped same way as in block definition strings.
+Character '/' in 's' and 'y' commands can be any visible character.
+
+Note that the 'D', 'A', 'I', 'F', 'B', 'c', 's', 'i', 'y', 'p', '<', '>' and 'd' commands 
+cause the length of input and output streams to be different.
+
+== EXAMPLES
+
+[source,shell script]
+----
+bbe -e "s/c:\\temp\\data1.txt/c:\\temp\\data2.txt/" file1
+----
+All occurrences of "c:\temp\data1.txt" in file file1 are changed to "c:\temp\data2.txt"
+
+[source,shell script]
+----
+bbe -b 0420:16 -e "r 4 \x12\x4a" file1
+----
+Two bytes starting at fifth byte of a 16 byte long block starting at offset 0420 (octal) in file1 are changed to hexadecimal values 12 and 4a.
+
+[source,shell script]
+----
+bbe -b :16 -e "A \x0a" file1
+----
+Newline is added after every block, block length is 16.
+
+
+== SEE ALSO
+
+sed (1).
+
+
+== Copying
+
+include::LICENSE[]
+
