@@ -34,20 +34,30 @@
 
 #endif
 
-/* output file */
+/**
+ * output file 
+ */
 struct io_file out_stream;
 
-/* list of input files, points to current file */
+/**
+ * list of input files, points to current file 
+ */
 struct io_file *in_stream = NULL;
 struct io_file *in_stream_start = NULL;
 
-/* input buffer */
+/**
+ * input buffer
+ */
 struct input_buffer in_buffer;
 
-/* output buffer */
+/**
+ * output buffer
+ */
 struct output_buffer out_buffer;
 
-/* open the output file */
+/**
+ * open the output file
+ */
 void
 set_output_file(char *file) {
   if (out_stream.file != NULL) panic("Only one output file can be defined", NULL, NULL);
@@ -72,7 +82,9 @@ set_output_file(char *file) {
   }
 }
 
-/* write to output stream from arbitrary buffer */
+/**
+ * write to output stream from arbitrary buffer
+ */
 void
 write_output_stream(unsigned char *buffer, ssize_t length) {
   if (write(out_stream.fd, buffer, length) == -1)
@@ -80,7 +92,9 @@ write_output_stream(unsigned char *buffer, ssize_t length) {
 }
 
 
-/* open an input file and put it in input file list */
+/**
+ * open an input file and put it in input file list
+ */
 void
 set_input_file(char *file) {
   struct io_file *new, *curr;
@@ -117,7 +131,9 @@ set_input_file(char *file) {
   }
 }
 
-/* return the name of current input file */
+/**
+ * return the name of current input file
+ */
 char *
 get_current_file(void) {
   struct io_file *f = in_stream_start;
@@ -137,7 +153,9 @@ get_current_file(void) {
 }
 
 
-/* initialize in and out buffers */
+/**
+ * initialize in and out buffers
+ */
 void
 init_buffer() {
   in_buffer.buffer = xmalloc(INPUT_BUFFER_SIZE);
@@ -152,6 +170,10 @@ init_buffer() {
   out_buffer.low_pos = out_buffer.buffer + OUTPUT_BUFFER_SAFE;
 }
 
+/**
+ * get a new set of bytes for the buffer
+ * @return the number of bytes read.
+ */
 ssize_t
 read_input_stream() {
   ssize_t read_count, last_read, to_be_read, to_be_saved;
@@ -198,26 +220,34 @@ read_input_stream() {
   return read_count;
 }
 
-/* reads byte from the buffer */
+/**
+ * @return byte from the buffer
+ */
 unsigned char
 read_byte() {
   return *in_buffer.read_pos;
 }
 
-/* returns pointer to the read position */
+/**
+ * @return pointer to the read position
+ */
 unsigned char *
 read_pos() {
   return in_buffer.read_pos;
 }
 
-/* return the block end pointer */
+/**
+ * @return the block end pointer
+ */
 unsigned char *
 block_end_pos() {
   return in_buffer.block_end;
 }
 
-/* advances the read pointer, if buffer has reached low water, get more from stream to buffer */
-/* returns false in case of end of stream */
+/**
+ * advances the read pointer, if buffer has reached low water, get more from stream to buffer.
+ * @return false in case of end of stream
+ */
 
 int
 get_next_byte() {
@@ -237,7 +267,9 @@ get_next_byte() {
   return 1;
 }
 
-/* check if the eof current block is in buffer and mark it in_buffer.block_end */
+/**
+ * check if the eof current block is in buffer and mark it in_buffer.block_end
+ */
 void
 mark_block_end() {
   unsigned char *safe_search, *scan;
@@ -315,13 +347,17 @@ mark_block_end() {
     in_buffer.block_end = in_buffer.stream_end;
 }
 
-/* returns true if current byte is last in block */
+/**
+ * @return true if current byte is last in block
+ */
 int
 last_byte() {
   return in_buffer.block_end == in_buffer.read_pos;
 }
 
-/* returns true (1) if end of stream has been reached */
+/**
+ * @return true (1) if end of stream has been reached
+ */
 static inline int
 end_of_stream() {
   if (in_buffer.stream_end == NULL) return 0;
@@ -415,7 +451,9 @@ find_block() {
   return found;
 }
 
-/* write null terminated string */
+/**
+ * write null terminated string
+ */
 void
 write_string(char *string) {
   register char *f;
@@ -427,7 +465,9 @@ write_string(char *string) {
   write_buffer(string, (off_t) (f - string));
 }
 
-/* write_buffer at the current write position */
+/**
+ * write_buffer at the current write position
+ */
 void
 write_buffer(unsigned char *buf, off_t length) {
 
@@ -442,14 +482,20 @@ write_buffer(unsigned char *buf, off_t length) {
   out_buffer.block_offset += length;
 }
 
-/* put_byte, put one byte att current write position */
+/**
+ * put_byte, put one byte att current write position
+ */
 void
 put_byte(unsigned char byte) {
   *out_buffer.write_pos = byte;
 }
 
-/* next_byte, advance the write pointer by one */
-/* if buffer full write it to disk */
+/**
+ * next_byte, advance the write pointer by one
+ */
+/**
+ * if buffer full write it to disk
+ */
 void
 write_next_byte() {
   out_buffer.write_pos++;
@@ -459,7 +505,9 @@ write_next_byte() {
   }
 }
 
-/* write unwritten data from buffer to disk */
+/**
+ * write unwritten data from buffer to disk
+ */
 void
 flush_buffer() {
   write_output_stream(out_buffer.buffer, out_buffer.write_pos - out_buffer.buffer);
@@ -467,7 +515,9 @@ flush_buffer() {
   out_buffer.write_pos = out_buffer.buffer;
 }
 
-/* close_output_stream */
+/**
+ * close_output_stream
+ */
 void
 close_output_stream() {
   if (close(out_stream.fd) == -1) panic("Error closing output stream", out_stream.file, strerror(errno));

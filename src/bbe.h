@@ -60,37 +60,54 @@
 #define off_t long int
 #endif
 
-/* Types */
+/**
+ * Types
+ */
 
-/* Constants */
-/* exit values */
+/**
+ * Constants
+ */
+
+/**
+ * exit values
+ */
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
-/* Input buffer size */
+/**
+ * Input buffer size
+ */
 #define INPUT_BUFFER_LOW (16*1024)
 #define INPUT_BUFFER_SIZE (16*INPUT_BUFFER_LOW)
 #define INPUT_BUFFER_SAFE (INPUT_BUFFER_SIZE - INPUT_BUFFER_LOW)
 
-/* Output buffer size*/
+/**
+ * Output buffer size
+ */
 #define OUTPUT_BUFFER_LOW INPUT_BUFFER_LOW
 #define OUTPUT_BUFFER_SIZE (16*OUTPUT_BUFFER_LOW)
 #define OUTPUT_BUFFER_SAFE (OUTPUT_BUFFER_SIZE - OUTPUT_BUFFER_LOW)
 
-/* block types */
+/**
+ * block types
+ */
 #define BLOCK_START_M 1
 #define BLOCK_START_S 2
 #define BLOCK_STOP_M  4
 #define BLOCK_STOP_S  8
 
-/* structs */
+/**
+ * structs
+ */
 
 struct pattern {
   unsigned char *string;
   off_t length;
 };
 
-/* Block definition */
+/**
+ * Block definition
+ */
 struct block {
   int type;
   union {
@@ -103,7 +120,9 @@ struct block {
   } stop;
 };
 
-/* Commands */
+/**
+ * Commands
+ */
 
 struct command_list {
   char letter;            // command letter (D,A,s,..)
@@ -123,7 +142,9 @@ struct commands {
   struct command_list *block_end;
 };
 
-/* in/out files */
+/**
+ * in/out files
+ */
 struct io_file {
   char *file;
   int fd;
@@ -131,7 +152,9 @@ struct io_file {
   struct io_file *next;
 };
 
-/* input buffer */
+/**
+ * input buffer
+ */
 struct input_buffer {
   unsigned char *buffer;       // buffer to be malloced
   unsigned char *read_pos;     // current read position
@@ -143,7 +166,9 @@ struct input_buffer {
   off_t block_num;             // number of current block, first = 1
 };
 
-/* output buffer */
+/**
+ * output buffer
+ */
 struct output_buffer {
   unsigned char *buffer;
   unsigned char *end;
@@ -153,7 +178,9 @@ struct output_buffer {
 };
 
 
-/* function prototypes */
+/**
+ * function prototypes
+ */
 extern void
 panic(char *msg, char *info1, char *syserror);
 
@@ -229,7 +256,9 @@ block_end_pos();
 extern char *
 xstrdup(char *str);
 
-/* global variables */
+/**
+ * global variables
+ */
 extern struct block block;
 extern struct command *commands;
 extern struct io_file out_stream;

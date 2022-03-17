@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * extends malloc with out of memory detection
+ * @return pointer to newly allocated memory
+ */
 void *
 xmalloc(size_t size) {
   register void *value = malloc(size);
@@ -33,6 +37,10 @@ xmalloc(size_t size) {
   return value;
 }
 
+/**
+ * extends strdup with out of memory detection
+ * @return pointer to newly allocated memory
+ */
 char *
 xstrdup(char *str) {
   char *ret = strdup(str);

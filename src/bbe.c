@@ -64,37 +64,57 @@ static char *email_address = "tjsa@iki.fi";
 int const MAX_TOKEN = 10;
 
 
-/* global block */
+/**
+ * global block
+ */
 struct block block;
 
-/* commands to be executed */
+/**
+ * commands to be executed
+ */
 struct commands cmds;
 
-/* extra info for panic */
+/**
+ * extra info for panic
+ */
 char *panic_info = NULL;
 
-/* -s switch state */
+/**
+ * -s switch state
+ */
 int output_only_block = 0;
 
-/* c command conversions */
+/**
+ * c command conversions
+ */
 char *convert_strings[] = {
     "BCDASC",
     "ASCBCD",
     "",
 };
-/* commands to be executed at start of buffer */
+/**
+ * commands to be executed at start of buffer
+ */
 #define BLOCK_START_COMMANDS "KDIJLFBN>"
 
-/* commands to be executed for each byte  */
-#define BYTE_COMMANDS "acdirsywjpl&|^~ufx"
+/**
+ * commands to be executed for each byte
+ */
+#define BYTE_COMMANDS "acdirstywjpl&|^~ufx"
 
-/* commands to be executed at end of buffer  */
+/**
+ * commands to be executed at end of buffer
+ */
 #define BLOCK_END_COMMANDS "A<"
 
-/* format types for p command */
+/**
+ * format types for p command
+ */
 char *p_formats = "DOHAB";
 
-/* formats for F and B commands */
+/**
+ * formats for F and B commands
+ */
 char *FB_formats = "DOH";
 
 static char short_opts[] = "b:g:e:f:o:s?V";
@@ -113,6 +133,9 @@ static struct option long_opts[] = {
 };
 #endif
 
+/**
+ * Stop the program in a consistent way.
+ */
 void
 panic(char *msg, char *info, char *syserror) {
   if (panic_info != NULL) fprintf(stderr, "%s: %s", program, panic_info);
@@ -130,6 +153,9 @@ panic(char *msg, char *info, char *syserror) {
   exit(EXIT_FAILURE);
 }
 
+/**
+ * Stop the program in a consistent way and report the command causing the error.
+ */
 void
 panic_c(char *msg, char action, char *info, char *syserror) {
   if (panic_info != NULL) fprintf(stderr, "%s: %s", program, panic_info);
@@ -157,7 +183,9 @@ panic_c(char *msg, char action, char *info, char *syserror) {
   exit(EXIT_FAILURE);
 }
 
-/* parse a long int, can start with n (dec), x (hex), 0 (oct) */
+/**
+ * parse a long int, can start with n (dec), x (hex), 0 (oct)
+ */
 off_t
 parse_long(char *long_int) {
   long long int l;
@@ -398,7 +426,9 @@ parse_block(char *bs, int length) {
   free(buf);
 }
 
-/* parse one command, commands are in list pointed by commands */
+/**
+ * parse one command, commands are in list pointed by commands
+ */
 void
 parse_command(char *command_string) {
   struct command_list *curr, *new, **start;
@@ -513,6 +543,7 @@ parse_command(char *command_string) {
       if (*convert_strings[j] == 0) panic_c("Unknown conversion", new->letter, command_string, NULL);
       break;
     case 's':
+    case 't':
     case 'y':
       if (strlen(command_string) < 4) panic_c("Error in command", new->letter, command_string, NULL);
 
@@ -589,9 +620,11 @@ parse_command(char *command_string) {
   free(c);
 }
 
-/* parse commands, commands are separated by ;. ; can be escaped as \;
-   and ;s inside " or ' are not separators
-   */
+/**
+ * parse commands, commands are separated by ';'.
+ * ';' can be escaped as '\;'.
+ * ';'s inside " or ' are not separators;
+ */
 void
 parse_commands(char *command_string) {
   char *c;
@@ -638,8 +671,10 @@ parse_commands(char *command_string) {
 }
 
 
-/* parse one command, commands are in list
-   read commands from file */
+/**
+ * parse commands in a file.
+ * commands are in list read commands from file
+ */
 void
 parse_command_file(char *file) {
   FILE *fp;

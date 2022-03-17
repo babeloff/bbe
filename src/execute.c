@@ -35,33 +35,46 @@
 
 #endif
 
-/* tells if current byte should be deleted */
+/**
+ * tells if current byte should be deleted
+ */
 static int delete_this_byte;
 
-/* tells if current block should be deleted */
+/**
+ * tells if current block should be deleted
+ */
 static int delete_this_block;
 
-/* tells if current block should be skipped */
+/**
+ * tells if current block should be skipped
+ */
 static int skip_this_block;
 
-/* tells if i or s commands are inserting bytes, meaningfull at end of the block */
+/**
+ * tells if i or s commands are inserting bytes, meaningfull at end of the block
+ */
 static int inserting;
 
-/* tells if there is w-command with file having %d 
-   this is only for performance 
-   */
+/**
+ * tells if there is w-command with file having %d this is only for performance
+ */
 static int w_commands_block_num = 0;
 
-/* command list for write_w_command */
+/**
+ * command list for write_w_command
+ */
 static struct command_list *current_byte_commands;
 
-/* most significant bit of byte */
+/**
+ * most significant bit of byte
+ */
 #define BYTE_MASK (1 << (sizeof(unsigned char) * 8 - 1))
 
 
-/* byte_to_string, convert byte value to visible string,
-   either hex (H), decimal (D), octal (O) or ascii (A)
-   */
+/**
+ * byte_to_string, convert byte value to visible string,
+ * either hex (H), decimal (D), octal (O) or ascii (A)
+ */
 char *
 byte_to_string(unsigned char byte, char format) {
   static char string[128];
@@ -96,7 +109,9 @@ byte_to_string(unsigned char byte, char format) {
   return string;
 }
 
-/* convert off_t to string  */
+/**
+ * convert off_t to string 
+ */
 char *
 off_t_to_string(off_t number, char format) {
   static char string[128];
@@ -122,7 +137,9 @@ off_t_to_string(off_t number, char format) {
 
 #define IO_BLOCK_SIZE (8 * 1024)
 
-/* execute given commands */
+/**
+ * execute given commands
+ */
 void
 execute_commands(struct command_list *c) {
   register int i;
@@ -403,7 +420,9 @@ execute_commands(struct command_list *c) {
   }
 }
 
-/* write w command, will be called when output_buffer is written, same will be written to w-command files */
+/**
+ * write w command, will be called when output_buffer is written, same will be written to w-command files
+ */
 void
 write_w_command(unsigned char *buf, size_t length) {
   struct command_list *c;
@@ -421,9 +440,10 @@ write_w_command(unsigned char *buf, size_t length) {
   }
 }
 
-/* finds the %B or %nB format string from the filename of w-command 
-   returns pointer to %-postion and the length of the format string
-   */
+/**
+ * finds the %B or %nB format string from the filename of w-command
+ * @return pointer to %-position and the length of the format string
+ */
 char *
 find_block_w_file(char *file, int *len) {
   char *f, *ppos;
@@ -446,7 +466,9 @@ find_block_w_file(char *file, int *len) {
   return NULL;
 }
 
-/* replaces all %B or %nB format strings with block number in a file name */
+/**
+ * replaces all %B or %nB format strings with block number in a file name
+ */
 void
 bn_printf(char *file, char *str, off_t block_number) {
   char *bstart, *f;
@@ -471,7 +493,9 @@ bn_printf(char *file, char *str, off_t block_number) {
   strcat(file, f);
 }
 
-/* close (if open) and open next w-command files for new block */
+/**
+ * close (if open) and open next w-command files for new block
+ */
 void
 open_w_files(off_t block_number) {
   struct command_list *c;
@@ -508,7 +532,9 @@ open_w_files(off_t block_number) {
 }
 
 
-/* init_commands, initialize those which need it, currently w - open file and rpos=0 for all */
+/**
+ * init_commands, initialize those which need it, currently w - open file and rpos=0 for all
+ */
 void
 init_commands(struct commands *commands) {
   struct command_list *c;
@@ -580,7 +606,9 @@ init_commands(struct commands *commands) {
 }
 
 
-/* close_commands, close those wich need it, currently w - close file */
+/**
+ * close_commands, close those wich need it, currently w - close file
+ */
 void
 close_commands(struct commands *commands) {
   struct command_list *c;
@@ -624,7 +652,9 @@ close_commands(struct commands *commands) {
   }
 }
 
-/* reset the rpos counter for next block, in case block was shorter eg. delete count */
+/**
+ * reset the rpos counter for next block, in case block was shorter eg. delete count
+ */
 static inline void
 reset_rpos(struct command_list *c) {
   while (c != NULL) {
@@ -635,7 +665,9 @@ reset_rpos(struct command_list *c) {
 }
 
 
-/* main execution loop */
+/**
+ * main execution loop
+ */
 void
 execute_program(struct commands *commands) {
   int block_end;
