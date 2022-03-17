@@ -31,19 +31,27 @@
 #endif
 
 #ifdef HAVE_ERRNO_H
+
 #include <errno.h>
+
 #endif
 
 #ifdef HAVE_ERROR_H
+
 #include <error.h>
+
 #endif
 
 #ifdef HAVE_SYS_TYPES_H
+
 #include <sys/types.h>
+
 #endif
 
 #ifdef HAVE_UNISTD_H
+
 #include <unistd.h>
+
 #endif
 
 #include <stdio.h>
@@ -78,85 +86,82 @@
 /* structs */
 
 struct pattern {
-  unsigned char * string;
+  unsigned char *string;
   off_t length;
 };
 
 /* Block definition */
 struct block {
-    int type;
-    union
-    {
-        off_t N;
-        struct pattern S;
-    } start;
-    union
-    {
-        off_t M;
-        struct pattern S;
-    } stop;
+  int type;
+  union {
+    off_t N;
+    struct pattern S;
+  } start;
+  union {
+    off_t M;
+    struct pattern S;
+  } stop;
 };
 
 /* Commands */
 
 struct command_list {
-    char letter;            // command letter (D,A,s,..)
-    off_t offset;           // n for D,r,i and d commands
-    off_t count;            // count for d command
-    struct pattern s1;      // string for A,I,r,i,s,w and y commands
-    struct pattern s2;      // replace for s and dest for y
-    int rpos;               // replace position for s,r and y
-    off_t fpos;             // found pos for s-command
-    FILE *fd;               // stream for w command
-    struct command_list *next;
+  char letter;            // command letter (D,A,s,..)
+  off_t offset;           // n for D,r,i and d commands
+  off_t count;            // count for d command
+  struct pattern s1;      // string for A,I,r,i,s,w and y commands
+  struct pattern s2;      // replace for s and dest for y
+  int rpos;               // replace position for s,r and y
+  off_t fpos;             // found pos for s-command
+  FILE *fd;               // stream for w command
+  struct command_list *next;
 };
 
 struct commands {
-    struct command_list *block_start;
-    struct command_list *byte;
-    struct command_list *block_end;
+  struct command_list *block_start;
+  struct command_list *byte;
+  struct command_list *block_end;
 };
 
 /* in/out files */
 struct io_file {
-    char *file;
-    int fd;
-    off_t start_offset;
-    struct io_file *next;
+  char *file;
+  int fd;
+  off_t start_offset;
+  struct io_file *next;
 };
 
 /* input buffer */
 struct input_buffer {
-    unsigned char *buffer;       // buffer to be malloced
-    unsigned char *read_pos;     // current read position
-    unsigned char *low_pos;      // low water mark
-    unsigned char *block_end;    // end of current block (if in buffer)
-    unsigned char *stream_end;   // end of stream (if in buffer)
-    off_t stream_offset;         // stream offset (at the beginning of buffer) current offset: offset + (read_pos - buffer)
-    off_t block_offset;          // block offset (start = 0) number of bytes read at position read_pos
-    off_t block_num;             // number of current block, first = 1
+  unsigned char *buffer;       // buffer to be malloced
+  unsigned char *read_pos;     // current read position
+  unsigned char *low_pos;      // low water mark
+  unsigned char *block_end;    // end of current block (if in buffer)
+  unsigned char *stream_end;   // end of stream (if in buffer)
+  off_t stream_offset;         // stream offset (at the beginning of buffer) current offset: offset + (read_pos - buffer)
+  off_t block_offset;          // block offset (start = 0) number of bytes read at position read_pos
+  off_t block_num;             // number of current block, first = 1
 };
 
 /* output buffer */
 struct output_buffer {
-    unsigned char *buffer;
-    unsigned char *end;
-    unsigned char *write_pos;    // current write psotion;
-    unsigned char *low_pos;      // low water mark
-    off_t block_offset;          // block offset (start = 0) number of bytes written at position write_pos
+  unsigned char *buffer;
+  unsigned char *end;
+  unsigned char *write_pos;    // current write psotion;
+  unsigned char *low_pos;      // low water mark
+  off_t block_offset;          // block offset (start = 0) number of bytes written at position write_pos
 };
-
 
 
 /* function prototypes */
 extern void
-panic(char *msg,char *info1,char *syserror);
+panic(char *msg, char *info1, char *syserror);
 
 extern void
-panic_c(char *msg,char action,char *info1,char *syserror);
+panic_c(char *msg, char action, char *info1, char *syserror);
 
 extern void *
-xmalloc (size_t size);
+xmalloc(size_t size);
 
 extern void
 set_output_file(char *file);
@@ -183,7 +188,7 @@ extern int
 last_byte();
 
 extern void
-write_buffer(unsigned char *buf,off_t length);
+write_buffer(unsigned char *buf, off_t length);
 
 extern void
 put_byte(unsigned char byte);
@@ -204,7 +209,7 @@ extern void
 close_output_stream();
 
 extern void
-write_w_command(unsigned char *buf,size_t length);
+write_w_command(unsigned char *buf, size_t length);
 
 extern void
 execute_program(struct commands *c);

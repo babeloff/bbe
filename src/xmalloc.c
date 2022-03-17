@@ -27,18 +27,16 @@
 #include <string.h>
 
 void *
-xmalloc (size_t size)
-{
-    register void *value = malloc(size);
-    if (value == 0) panic("Out of memory",NULL,NULL);
-    return value;
+xmalloc(size_t size) {
+  register void *value = malloc(size);
+  if (value == 0) panic("Out of memory", NULL, NULL);
+  return value;
 }
 
 char *
-xstrdup(char *str)
-{
-    char *ret = strdup(str);
-    if (ret == NULL) panic("Out of memory",NULL,NULL);
-    return ret;
+xstrdup(char *str) {
+  char *ret = strdup(str);
+  if (ret == NULL) panic("Out of memory", NULL, NULL);
+  return ret;
 }
 
